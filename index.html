@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CHI 2027 Map</title>
+<style>
+:root{
+  --bg:#f6f6f4; --surface:#ffffff; --surface-2:#f0f1f3; --ink:#1d1f23; --ink-2:#4b5059; --muted:#868b94; --line:#e2e4e8; --line-2:#cfd3d9;
+  --accent:#e8740c; --accent-ink:#b85a05; --accent-soft:#fde9d5;
+  --quiet:#2f8f83; --quiet-soft:#dcf1ee; --busy:#c98a00; --busy-soft:#fbf0d2;
+  --ok:#21794a; --ok-soft:#e1f3e8; --no:#b4322f; --no-soft:#fbe3e2; --unk:#8a6a00; --unk-soft:#fbf2d6;
+  --room:#ffffff; --corridor:#e9ebef; --shadow:0 1px 2px rgba(16,24,40,.06),0 2px 8px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141518; --surface:#1d1f23; --surface-2:#25282d; --ink:#eef0f3; --ink-2:#c3c7ce; --muted:#8e949d; --line:#2f3238; --line-2:#3c4047;
+  --accent:#f28a2e; --accent-ink:#f6a55c; --accent-soft:#3d2a18; --quiet:#4fbcad; --quiet-soft:#173430; --busy:#e0a92a; --busy-soft:#3a3016;
+  --ok:#5cc58a; --ok-soft:#173523; --no:#ef7470; --no-soft:#3b1a19; --unk:#e0be52; --unk-soft:#3a3216; --room:#23262b; --corridor:#2c3036;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.25)}}
+:root[data-theme="dark"]{
+  --bg:#141518; --surface:#1d1f23; --surface-2:#25282d; --ink:#eef0f3; --ink-2:#c3c7ce; --muted:#8e949d; --line:#2f3238; --line-2:#3c4047;
+  --accent:#f28a2e; --accent-ink:#f6a55c; --accent-soft:#3d2a18; --quiet:#4fbcad; --quiet-soft:#173430; --busy:#e0a92a; --busy-soft:#3a3016;
+  --ok:#5cc58a; --ok-soft:#173523; --no:#ef7470; --no-soft:#3b1a19; --unk:#e0be52; --unk-soft:#3a3216; --room:#23262b; --corridor:#2c3036;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.25)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.app{display:grid;grid-template-columns:220px 1fr;height:100vh;min-height:640px}
+/* sidebar */
+.side{background:var(--surface);border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 10px 18px}
+.brand .mark{width:30px;height:30px;border-radius:8px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px}
+.brand b{font-size:16px;letter-spacing:-.01em}
+.brand span{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.nav{display:flex;align-items:center;gap:10px;border:0;background:transparent;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:600;color:var(--ink-2);text-align:left}
+.nav svg{width:18px;height:18px;flex:none}
+.nav:hover{background:var(--surface-2)}
+.nav[aria-current="page"]{background:var(--accent-soft);color:var(--accent-ink)}
+/* main */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.topbar{display:flex;align-items:center;gap:14px;padding:14px 22px;background:var(--surface);border-bottom:1px solid var(--line)}
+.search{flex:1;max-width:520px;display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid transparent;border-radius:10px;padding:9px 12px}
+.search:focus-within{border-color:var(--accent);background:var(--surface)}
+.search svg{width:16px;height:16px;color:var(--muted);flex:none}
+.search input{border:0;outline:0;flex:1;background:transparent;font:inherit;color:inherit;min-width:0}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.now-chip{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
+.screen{flex:1;min-height:0;overflow:hidden}
+/* plan */
+svg.plan{width:100%;height:auto;max-height:100%;display:block}
+.plan .bg{fill:var(--surface)}
+.plan .corr{fill:var(--corridor)}
+.plan .room{fill:var(--room);stroke:var(--line-2);stroke-width:1;cursor:pointer;transition:fill .15s}
+.plan .room:hover,.plan .room:focus{fill:var(--surface-2);outline:none}
+.plan .room:focus-visible{stroke:var(--accent);stroke-width:2}
+.plan .room.busy{fill:url(#busy)}
+.plan .room.quiet{fill:var(--quiet-soft);stroke:var(--quiet);stroke-width:1.5}
+.plan .room.sel{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2.5}
+.plan .lbl{font-size:8px;fill:var(--ink-2);pointer-events:none;font-weight:600}
+.plan .lbl.sel{fill:var(--accent-ink);font-weight:800}
+.plan .sub{font-size:6.5px;fill:var(--busy);font-weight:700;pointer-events:none}
+.plan .route{fill:none;stroke:var(--accent);stroke-width:3;stroke-dasharray:5 4;stroke-linecap:round}
+.plan .fac circle{stroke:var(--surface);stroke-width:1.5}
+.plan .fac.lift circle{fill:#3b6fd8}.plan .fac.wc circle{fill:#7a4fd6}.plan .fac.seat circle{fill:#6b7280}
+.plan .fac path,.plan .fac rect.g{fill:#fff}
+.plan .fac text{font-size:6.5px;fill:#fff;font-weight:800}
+/* map view */
+.mapview{display:grid;grid-template-columns:minmax(0,1fr);height:100%}
+.mapview.open{grid-template-columns:minmax(0,1fr) 320px}
+.mapview.open .panel{animation:slidein .18s ease-out}
+@media (prefers-reduced-motion: reduce){.mapview.open .panel{animation:none}}
+.nextchip{position:absolute;top:14px;left:14px;display:flex;align-items:center;gap:8px;max-width:calc(100% - 110px);background:var(--surface);border:1px solid var(--line);border-radius:999px;box-shadow:var(--shadow);padding:7px 14px 7px 10px;cursor:pointer;font-size:13.5px;color:var(--ink);text-align:left}
+.nextchip:hover{border-color:var(--accent)}
+.nextchip svg{width:16px;height:16px;color:var(--accent);flex:none}
+.nextchip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nextchip em{font-style:normal;font-weight:800;color:var(--accent-ink);margin-right:4px}
+.nextchip b{color:var(--muted)}
+.canvas{position:relative}
+.floorbar{position:absolute;top:14px;right:14px;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.floorbar button{border:0;border-bottom:1px solid var(--line);background:transparent;width:48px;height:38px;font-weight:700;font-size:14px;cursor:pointer;color:var(--ink-2)}
+.floorbar button:last-child{border-bottom:0}
+.floorbar button:hover{background:var(--surface-2)}
+.floorbar button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.floorbar button.aud{font-size:12px}
+.floorbar .gap{display:block;height:6px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.layerbar{position:absolute;left:14px;bottom:14px;display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:5px}
+.lyr{display:flex;align-items:center;gap:6px;height:36px;border:0;border-radius:9px;background:transparent;padding:0 10px 0 6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2)}
+.lyr svg{width:22px;height:22px;flex:none}
+.lyr:hover{background:var(--surface-2)}
+.lyr[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-ink);box-shadow:inset 0 0 0 2px var(--accent)}
+.plan .dim{opacity:.3}
+.plan .room.hit{stroke:var(--accent);stroke-width:2.5}
+.plan .fac .ring{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2}
+.hits{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.hit-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px 10px;cursor:pointer}
+.hit-row:hover{border-color:var(--line-2)}
+.hit-row .ic svg{width:22px;height:22px;display:block}
+.hit-row b{display:block;font-size:14px;color:var(--ink)}
+.hit-row span span{font-size:12.5px;color:var(--muted)}
+.floors{padding:18px 12px;display:flex;flex-direction:column;gap:6px;overflow:auto;background:var(--surface);border-right:1px solid var(--line)}
+.floors .cap{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:0 4px 4px}
+.floors button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;cursor:pointer;text-align:left}
+.floors button:hover{border-color:var(--line-2)}
+.floors button b{display:block;font-size:15px}
+.floors button span{display:block;font-size:11.5px;color:var(--muted);line-height:1.3}
+.floors button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.floors button[aria-pressed="true"] span{color:var(--surface);opacity:.75}
+.floors hr{border:0;border-top:1px dashed var(--line-2);margin:6px 0}
+.center{display:flex;flex-direction:column;min-width:0;min-height:0;padding:18px 22px;gap:12px}
+.center h1{margin:0;font-size:22px;letter-spacing:-.01em}
+.center h1 span{font-weight:500;color:var(--muted);font-size:15px;margin-left:8px}
+.canvas{flex:1;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:60px 80px 66px 20px;display:flex;align-items:center;justify-content:center}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);border-radius:999px;background:var(--surface);padding:5px 12px 5px 8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink-2)}
+.pill i{width:14px;height:14px;border-radius:50%;display:inline-block}
+.pill[aria-pressed="false"]{opacity:.55}
+.pill[aria-pressed="false"] i{filter:grayscale(1)}
+/* detail panel */
+.panel{background:var(--surface);border-left:1px solid var(--line);overflow:auto;padding:18px 18px 24px;position:relative}
+.panel h2{margin:0;font-size:22px;letter-spacing:-.015em;padding-right:36px}
+.panel .meta{color:var(--muted);margin:4px 0 16px;font-size:14px}
+.x{position:absolute;right:16px;top:18px;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--surface);cursor:pointer;display:grid;place-items:center}
+.x svg{width:14px;height:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;width:100%}
+.btn.primary:hover{filter:brightness(.95)}
+.btn.ghost{background:var(--surface-2);color:var(--ink);width:100%}
+.btn svg{width:16px;height:16px}
+.sec{border-top:1px solid var(--line);padding:14px 0 4px;margin-top:14px}
+.sec h3{margin:0 0 8px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ses{display:flex;flex-direction:column;font-size:14px;padding:5px 0}
+.ses .t{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.live{display:inline-block;font-size:10.5px;font-weight:800;background:var(--accent);color:#fff;border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+.cap-row{display:flex;align-items:center;gap:10px;font-size:14px}
+.meter{flex:none;width:72px;height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.meter b{display:block;height:100%;background:var(--busy)}
+.a11y{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.a11y li{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px}
+.tag{font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}.tag.no{background:var(--no-soft);color:var(--no)}.tag.unk{background:var(--unk-soft);color:var(--unk)}
+.srcline{font-size:12px;color:var(--muted);margin-top:8px}
+.srcline a{color:inherit}
+.rest{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;width:100%;background:var(--surface);cursor:pointer;text-align:left}
+.rest:hover{border-color:var(--line-2)}
+.rest .ic{width:34px;height:34px;border-radius:10px;background:var(--quiet-soft);color:var(--quiet);display:grid;place-items:center;flex:none}
+.rest .ic svg{width:18px;height:18px}
+.rest b{display:block;font-size:14px;color:var(--ink)}.rest span{font-size:12.5px;color:var(--muted)}
+.steps{list-style:none;margin:0;padding:0;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:26px 1fr;gap:10px;padding:6px 0;font-size:14px}
+.steps li::before{content:counter(s);width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);font-weight:800;font-size:12px;display:grid;place-items:center}
+.empty{display:flex;flex-direction:column;gap:10px}
+.empty h2{font-size:20px}
+.empty p{margin:0 0 6px;color:var(--muted);font-size:14px}
+.quick{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface);cursor:pointer;text-align:left;width:100%}
+.quick:hover{border-color:var(--line-2);box-shadow:var(--shadow)}
+.quick .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none}
+.quick .ic svg{width:18px;height:18px}
+.quick b{display:block;font-size:14px;color:var(--ink)}.quick span{font-size:12.5px;color:var(--muted)}
+/* schedule */
+.schedview{display:grid;grid-template-columns:minmax(0,1fr);height:100%}
+.schedview.open{grid-template-columns:minmax(0,1fr) 480px}
+.schedview:not(.open) .cards{grid-template-columns:repeat(auto-fill,minmax(460px,1fr))}
+.slist{overflow:auto}
+.shead{position:sticky;top:0;z-index:1;background:var(--bg);padding:18px 22px 10px;display:flex;align-items:baseline;gap:10px}
+.shead h1{margin:0;font-size:22px;letter-spacing:-.01em}
+.shead span{color:var(--muted);font-size:14px}
+.days{display:flex;gap:6px;padding:0 22px 12px;background:var(--bg);position:sticky;top:58px;z-index:1}
+.days button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;color:var(--muted);cursor:default}
+.days button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.cards{display:grid;gap:8px;padding:0 22px 22px}
+.card{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px;cursor:pointer}
+.card:hover{border-color:var(--line-2);box-shadow:var(--shadow)}
+.card[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.card .t{font-weight:700;font-size:15px}
+.card .k{font-size:12.5px;color:var(--muted)}
+.loc{display:flex;flex-direction:column;gap:2px;font-size:13.5px}
+.loc b{display:flex;align-items:center;gap:6px}
+.loc b svg{width:14px;height:14px;color:var(--accent);flex:none}
+.loc .lm{color:var(--muted);font-size:12.5px}
+.badge{align-self:flex-start;font-size:11.5px;font-weight:700;color:var(--unk);background:var(--busy-soft);border-radius:999px;padding:1px 8px}
+.preview{background:var(--surface);border-left:1px solid var(--line);overflow:auto;padding:22px;position:relative;animation:slidein .18s ease-out}
+@keyframes slidein{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.preview{animation:none}}
+.preview h2{padding-right:40px}
+.preview h2{margin:0;font-size:22px;letter-spacing:-.01em}
+.preview .meta{color:var(--muted);font-size:14px;margin:2px 0 12px}
+.pvmap{border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--surface)}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.fact{background:var(--surface-2);border-radius:10px;padding:10px 12px;font-size:13.5px}
+.fact h3{margin:0 0 2px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+/* list view */
+.listview{height:100%;overflow:auto;padding:18px 22px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;align-content:start;grid-auto-rows:max-content;align-items:start}
+.fcol{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.fcol h2{margin:0;padding:12px 16px;font-size:15px;border-bottom:1px solid var(--line)}
+.fcol h2 span{font-weight:500;color:var(--muted);font-size:13px;margin-left:6px}
+.fcol ul{list-style:none;margin:0;padding:0}
+.fcol li>*{display:flex;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:9px 16px;gap:8px;font-size:14px}
+.fcol li:last-child>*{border-bottom:0}
+.fcol li button{cursor:pointer}
+.fcol li button:hover{background:var(--surface-2)}
+.fcol .m{margin-left:auto;color:var(--muted);font-size:12.5px;text-align:right}
+.fcol .fa{color:var(--ink-2)}
+/* search */
+.results{height:100%;overflow:auto;padding:18px 22px}
+.results h1{margin:0 0 10px;font-size:18px}
+.results ul{list-style:none;margin:0;padding:0;max-width:860px;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.results li button,.results li div{display:flex;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:11px 16px;gap:10px}
+.results li button{cursor:pointer}.results li button:hover{background:var(--surface-2)}
+.results .m{margin-left:auto;color:var(--muted);font-size:13px}
+.results .none{color:var(--muted)}
+
+.canvas.picking svg,.canvas.picking .room{cursor:crosshair}
+.canvas.picking .room:hover{fill:#e3ebfb;stroke:#3b6fd8}
+.pickbar{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:#3b6fd8;color:#fff;font-weight:700;font-size:14px;border-radius:999px;padding:6px 6px 6px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow)}
+.pickbar button{border:0;border-radius:999px;background:rgba(255,255,255,.2);color:#fff;font-weight:700;padding:4px 12px;cursor:pointer}
+.back{border:0;background:transparent;color:var(--muted);font-weight:600;font-size:13px;padding:0;margin:0 0 6px;cursor:pointer}
+.back:hover{color:var(--ink)}
+.fromsel{display:flex;flex-direction:column;gap:4px;margin-top:12px;font-size:12.5px;color:var(--muted)}
+.fromsel input{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line-2);border-radius:10px;padding:9px 11px}
+.fromsel input:focus-visible{outline:2px solid #3b6fd8;outline-offset:1px}
+.fromres{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.fromres button{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:9px 11px;cursor:pointer;font:inherit;text-align:left}
+.fromres button:hover,.fromres button:focus-visible{border-color:#3b6fd8}
+.fromres b{font-size:14px;color:var(--ink)}.fromres span{font-size:12.5px;color:var(--muted)}
+.scenes{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.scenes button{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px 10px;font:inherit;font-size:12.5px;line-height:1.3;color:var(--ink);text-align:left;cursor:pointer}
+.scenes button:hover{border-color:var(--line-2);box-shadow:var(--shadow)}
+.fromsel select{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line-2);border-radius:10px;padding:8px 10px}
+.ft{display:grid;gap:0;border:1px solid var(--line);border-radius:12px;padding:4px 12px;margin-top:10px}
+.ft>div{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:14px}
+.ft>div+div{border-top:1px dashed var(--line-2)}
+.ft span:not(.dot){color:var(--muted);font-size:12.5px}
+.ft button{margin-left:auto;border:0;background:transparent;color:var(--accent-ink);font-weight:700;font-size:13px;cursor:pointer}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}.dot.you{background:#3b6fd8}.dot.to{background:var(--accent)}
+.flv{border:1px solid var(--line-2);background:var(--surface);border-radius:6px;font-size:11px;font-weight:700;padding:0 6px;margin-left:4px;cursor:pointer;color:var(--ink-2)}
+.flv[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+
+.floorbar .allbtn{display:grid;place-items:center;border-bottom:6px solid var(--surface-2)}
+.floorbar .allbtn svg{width:18px;height:18px}
+svg.ov{width:100%;height:auto;max-height:100%;display:block}
+.ov .slab{cursor:pointer}
+.ov .slab .top{fill:var(--surface);stroke:var(--line-2);stroke-width:1.2}
+.ov .slab .side{fill:var(--line)}
+.ov .slab:hover .top,.ov .slab:focus .top{fill:var(--surface-2)}
+.ov .slab:focus{outline:none}.ov .slab:focus-visible .top{stroke:var(--accent);stroke-width:2}
+.ov .slab.act .top{stroke:var(--ink);stroke-width:2}
+.ov .slab.tgt .top{stroke:var(--accent);stroke-width:2.2}
+.ov .slab.frm .top{stroke:#3b6fd8;stroke-width:2.2}
+.ov .cor{fill:var(--corridor)}
+.ov .z-quiet{fill:var(--quiet-soft);stroke:var(--quiet);stroke-width:1.2}
+.ov .z-busy{fill:url(#ovbusy);stroke:var(--busy);stroke-width:.8}
+.ov .z-quiet.on,.ov .z-busy.on{stroke:var(--accent);stroke-width:2.4}
+.ov .z-tgt{fill:var(--accent);opacity:.85}
+.ov .shaft{stroke:#3b6fd8;stroke-width:2;stroke-dasharray:3 3;opacity:.45}
+.ov .shaft.on{opacity:1;stroke-width:3}
+.ov .ldot{fill:#3b6fd8;stroke:var(--surface);stroke-width:1.5}
+.ov .you{fill:#3b6fd8;stroke:#fff;stroke-width:2}
+.ov .pinm{fill:var(--accent)}
+.ov .trip{stroke:var(--accent);stroke-width:4;stroke-linecap:round}
+.ov .walk{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 4}
+.ov .lv{font-size:15px;font-weight:800;fill:var(--ink)}
+.ov .ld{font-size:10px;fill:var(--muted)}
+.tripbox{border:1px solid var(--line);border-radius:12px;padding:8px;background:var(--surface)}
+
+.listview2{height:100%;overflow:auto;position:relative}
+.lindex{position:sticky;top:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;padding:14px 22px;background:var(--bg);border-bottom:1px solid var(--line)}
+.lindex a{display:flex;flex-direction:column;align-items:flex-start;text-decoration:none;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 14px;min-width:84px}
+.lindex a b{font-size:15px;color:var(--ink)}
+.lindex a span{font-size:12px;color:var(--muted)}
+.lindex a:hover{border-color:var(--line-2)}
+.lindex a[aria-current="true"]{background:var(--ink);border-color:var(--ink)}
+.lindex a[aria-current="true"] b,.lindex a[aria-current="true"] span{color:var(--surface)}
+.lbody{padding:6px 22px 0}
+.lbody::after{content:"";display:block;height:calc(100vh - 240px)}
+.lsec{padding-top:18px}
+.lsec h2{margin:0 0 8px;font-size:18px;outline:none}
+.lsec h2 span{font-weight:500;color:var(--muted);font-size:14px;margin-left:8px}
+.facs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.fchip{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 4px}
+.fchip svg{width:18px;height:18px}
+.rgrid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:6px}
+.rgrid button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer}
+.rgrid button:hover{border-color:var(--line-2);box-shadow:var(--shadow)}
+.rgrid .rn{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px}
+.rgrid .m{margin-left:auto;color:var(--muted);font-size:12.5px;text-align:right}
+.rtag{font-size:11px;font-weight:700;border-radius:999px;padding:0 7px}
+.rtag.q{background:var(--quiet-soft);color:var(--quiet)}.rtag.b{background:var(--busy-soft);color:var(--unk)}
+@media (max-width:900px){.rgrid{grid-template-columns:1fr}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:1180px){.mapview.open{grid-template-columns:minmax(0,1fr) 300px}.schedview.open{grid-template-columns:minmax(0,1fr) 400px}.schedview.open .card{grid-template-columns:1fr}}
+@media (max-width:900px){.app{grid-template-columns:1fr;height:auto}.side{flex-direction:row;align-items:center;padding:10px 12px;border-right:0;border-bottom:1px solid var(--line)}.brand{padding:0 10px 0 0}
+  .mapview,.schedview{grid-template-columns:1fr;height:auto}.floors{flex-direction:row;flex-wrap:wrap}.panel,.preview{border-left:0;border-top:1px solid var(--line)}.screen{overflow:visible}.slist{overflow:visible}.topbar{flex-wrap:wrap}.now-chip{margin-left:0}}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="side" aria-label="Main">
+    <div class="brand"><span class="mark" aria-hidden="true">CHI</span><div><b>CHI 2027</b><span>Pittsburgh</span></div></div>
+    <button class="nav" data-tab="sched"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Program</button>
+    <button class="nav" data-tab="map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Map</button>
+  </nav>
+  <div class="main">
+    <header class="topbar">
+      <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="sr">Search</span>
+        <input id="q" type="search" placeholder="Search rooms, sessions, or facilities" autocomplete="off"></label>
+      <div class="seg" role="group" aria-label="View" id="viewseg">
+        <button data-view="map" aria-pressed="true">Map</button>
+        <button data-view="list" aria-pressed="false">List</button>
+      </div>
+      <span class="now-chip">Mon, Apr 13 · 11:20</span>
+    </header>
+    <main class="screen" id="screen" tabindex="-1"></main>
+  </div>
+</div>
+
+<script>
+const DATA = {"rooms": {"Auditorium": {"cap": null, "floor": "0. Auditorium - Lower Level", "sessions": [["08:30", "10:30", "Opening Plenary & Keynote"], ["11:15", "12:45", "AI Explanations and Decision Support in Healthcare"], ["14:15", "15:45", "Student Mentoring Program: CHI 101"], ["16:30", "18:00", "SIGCHI Academy Panel"]]}, "P1 - Room 116": {"cap": 236, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Online Cultures and Creator Economies"], ["14:15", "15:45", "Cross-Sensory Futures: Rewiring Perception in HCI"], ["16:30", "18:00", "Cross-Sensory Futures: Rewiring Perception in HCI"]]}, "P1 - Room 112": {"cap": 500, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Power, Values, and the Politics of Accessibility"], ["14:15", "15:45", "Sensemaking and AI 2026: Uses, Behaviors, Design, and Recommendations"], ["16:30", "18:00", "Sensemaking and AI 2026: Uses, Behaviors, Design, and Recommendations"]]}, "P1 - Room 129": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "AI & Timing Matters"], ["14:15", "15:45", "Developmentally Safe Generative AI Environment for Youth"], ["16:30", "18:00", "Developmentally Safe Generative AI Environment for Youth"]]}, "P1 - Room 118": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Haptic and Multisensory Feedback"], ["14:15", "15:45", "From Generation to Simulation: Responsible Use of AI Personas in Human-Centered Design and Research"], ["16:30", "18:00", "From Generation to Simulation: Responsible Use of AI Personas in Human-Centered Design and Research"]]}, "P1 - Room 119": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Animals & Nature"], ["14:15", "15:45", "From Human-Human Collaboration to Human-Agent Collaboration: A Vision, Design Philosophy, and an Empirical Framework for Achieving Successful Partnerships Between Humans and LLM Agents"], ["16:30", "18:00", "From Human-Human Collaboration to Human-Agent Collaboration: A Vision, Design Philosophy, and an Empirical Framework for Achieving Successful Partnerships Between Humans and LLM Agents"]]}, "P1 - Room 125": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Learning, Training, and Self-Development with AI"], ["14:15", "15:45", "Growing Bio-HCI at CHI: Exchanging Materials, Tools, Practices, and Artifacts"], ["16:30", "18:00", "Growing Bio-HCI at CHI: Exchanging Materials, Tools, Practices, and Artifacts"]]}, "P1 - Room 111": {"cap": 236, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Diversity and Inclusion"], ["14:15", "15:45", "Body Transformation Experiences: A workshop on How to Elicit, Assess and Support them through Multisensory Technology"], ["16:30", "18:00", "Body Transformation Experiences: A workshop on How to Elicit, Assess and Support them through Multisensory Technology"]]}, "P1 - Room 124": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "AI in Work and Expertise"], ["14:15", "15:45", "Shaping Future Human Connection: Social Augmentation through XR Technologies"], ["16:30", "18:00", "Shaping Future Human Connection: Social Augmentation through XR Technologies"]]}, "P1 - Room 114": {"cap": 236, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Gendered Experiences"], ["14:15", "15:45", "Co-Data: Cultivating Effective Human-LLM Collaboration for Collaborative Data Processing"], ["16:30", "18:00", "Co-Data: Cultivating Effective Human-LLM Collaboration for Collaborative Data Processing"]]}, "P1 - Room 120": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Textiles & Sound"], ["14:15", "15:45", "The 3rd InterAI Workshop: Interactive AI for Human-centered Robotics"], ["16:30", "18:00", "The 3rd InterAI Workshop: Interactive AI for Human-centered Robotics"]]}, "P1 - Room 121": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "AI Personality"], ["14:15", "15:45", "The AI Accomplice: Exploring Generative Artificial Intelligence in Facilitating and Amplifying Deceptive Designs"], ["16:30", "18:00", "The AI Accomplice: Exploring Generative Artificial Intelligence in Facilitating and Amplifying Deceptive Designs"]]}, "P1 - Room 122": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "AI-Driven Creativity & Design Methods"], ["14:15", "15:45", "Understanding and Engaging Critical Resistance to AI in Education"], ["16:30", "18:00", "Understanding and Engaging Critical Resistance to AI in Education"]]}, "P1 - Room 113": {"cap": 236, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Toxicity and Moderation in Online Games"], ["14:15", "15:45", "Data Literacy for the 21st Century: Perspectives from Visualization, Cognitive Science, Artificial Intelligence, and Education"], ["16:30", "18:00", "Data Literacy for the 21st Century: Perspectives from Visualization, Cognitive Science, Artificial Intelligence, and Education"]]}, "P1 - Room 115": {"cap": 236, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Structural Foundations and Theories"], ["14:15", "15:45", "Designing with forest stories to explore what it might mean for forest-related technologies to “get it right”"], ["16:30", "18:00", "Designing with forest stories to explore what it might mean for forest-related technologies to “get it right”"]]}, "P1 - Room 123": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Virtual Reality"], ["14:15", "15:45", "Human-Centered Explainable AI (HCXAI): Re-examining XAI in the Era of Agentic AI"], ["16:30", "18:00", "Human-Centered Explainable AI (HCXAI): Re-examining XAI in the Era of Agentic AI"]]}, "P1 - Room 127": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Hand Pose & Gestures"], ["14:15", "15:45", "Visual Storytelling Beyond the Human: Co-Creation, Culture, and Futures"], ["16:30", "18:00", "Visual Storytelling Beyond the Human: Co-Creation, Culture, and Futures"]]}, "P1 - Room 128": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Trust and Transparency in Everyday Life"], ["14:15", "15:45", "Understanding, Mitigating, and Leveraging Cognitive Biases to Calibrate Trust in Evolving AI Systems"], ["16:30", "18:00", "Workshop on Developing Standards and Documentation For LLM Use as Simulated Research Participants"]]}, "P1 - Room 134": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Collaborative/Shared XR"], ["14:15", "15:45", "Generative Design and Vibe Coding: Rethinking The Design-Development Divide for UI Prototyping"], ["16:30", "18:00", "1st Annual Human-CAT (Connection, Animals, Technology) Interaction Meet-Up"]]}, "P1 - Room 132": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Interactive Prompting, Chaining, and LLM Orchestration Tools"], ["14:15", "15:45", "Follow Your Nose: Experiencing Smell as a Design Material"], ["16:30", "18:00", "Cultures as Catalysts: Nurturing HCI Communities Across Regions"]]}, "P1 - Room 131": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Quantifying the Algorithmic Lens"], ["14:15", "15:45", "The CHIndness of Strangers: Exploring Reciprocity and Pro-Social Action"], ["16:30", "18:00", "Flourishing In Flux: Connecting on the Things That Keep (Us) Changing"]]}, "P1 - Room 133": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Identity, Culture, and Games for Social Impact"], ["14:15", "15:45", "How Could AI Supply Chain Research Shape HCI Inquiries And Vice-Versa?"], ["16:30", "18:00", "PhysioCHI: Lessons Learned from Implementing Human-Centered Physiological Computing"]]}, "P1 - Room 117": {"cap": 780, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "AI in Family, Dating and Private Life"], ["14:15", "15:45", "Does Peer Review Need to Change?  A Panel on Reporting Standards and Checklists in the Age of AI"], ["16:30", "18:00", "Participatory AI & Social Justice"]]}, "M2 - Room M211/212": {"cap": 80, "floor": "6. Convention Centre - M2", "sessions": [["11:15", "12:45", "Living with Robots"], ["14:15", "15:45", "Health Learning and Youth"], ["16:30", "18:00", "Cognition Uncertainty and Tool Support"]]}, "P1 - Room 130": {"cap": 75, "floor": "3. Convention Centre - P1", "sessions": [["11:15", "12:45", "Relationships with AI"]]}, "Area 1 + 2 + 3: theatre": {"cap": null, "floor": "2. Convention Centre - P0", "sessions": [["11:15", "12:45", "AI Governance and Accountability"]]}, "Banquet Hall": {"cap": 150, "floor": "4. Convention Centre - P2", "sessions": [["14:15", "15:45", "Global Science Program"], ["16:30", "18:00", "Student Mentoring Program: Building a Research Cohort"]]}, "Area 1 + 2 + 3: demos": {"cap": null, "floor": "2. Convention Centre - P0", "sessions": [["18:00", "19:30", "Reception and Interactivity Demos"]]}, "Area 1 + 2 + 3: posters": {"cap": null, "floor": "2. Convention Centre - P0", "sessions": [["14:15", "15:45", "Posters (Monday)"], ["18:00", "19:30", "Posters (Monday)"]]}, "Entrance Hall": {"cap": null, "floor": "2. Convention Centre - P0", "sessions": []}, "VIP Room": {"cap": 60, "floor": "5. Convention Centre - M1", "sessions": []}, "M2 - Room M213/214": {"cap": 60, "floor": "6. Convention Centre - M2", "sessions": []}, "M2 - Room M215/216": {"cap": 50, "floor": "6. Convention Centre - M2", "sessions": []}, "M2 - Room M217": {"cap": 20, "floor": "6. Convention Centre - M2", "sessions": []}, "M2 - Room M218": {"cap": 20, "floor": "6. Convention Centre - M2", "sessions": []}, "M2 - Room M219": {"cap": null, "floor": "6. Convention Centre - M2", "sessions": []}, "M2 - Room M220": {"cap": null, "floor": "6. Convention Centre - M2", "sessions": []}, "M2 - Room M221": {"cap": null, "floor": "6. Convention Centre - M2", "sessions": []}, "P2 - Room 211": {"cap": 250, "floor": "4. Convention Centre - P2", "sessions": []}, "P2 - Room 212": {"cap": 50, "floor": "4. Convention Centre - P2", "sessions": []}, "Area 1 + 2 + 3: exhibits": {"cap": null, "floor": "2. Convention Centre - P0", "sessions": []}, "Area 1 + 2 + 3: videos": {"cap": null, "floor": "2. Convention Centre - P0", "sessions": []}, "Area 1 + 2 + 3: SIGCHI Lounge": {"cap": null, "floor": "2. Convention Centre - P0", "sessions": []}}, "slot": [["AI & Timing Matters", "P1 - Room 129"], ["AI Explanations and Decision Support in Healthcare", "Auditorium"], ["AI Governance and Accountability", "Area 1 + 2 + 3: theatre"], ["AI Personality", "P1 - Room 121"], ["AI in Family, Dating and Private Life", "P1 - Room 117"], ["AI in Work and Expertise", "P1 - Room 124"], ["AI-Driven Creativity & Design Methods", "P1 - Room 122"], ["Animals & Nature", "P1 - Room 119"], ["Collaborative/Shared XR", "P1 - Room 134"], ["Diversity and Inclusion", "P1 - Room 111"], ["Gendered Experiences", "P1 - Room 114"], ["Hand Pose & Gestures", "P1 - Room 127"], ["Haptic and Multisensory Feedback", "P1 - Room 118"], ["Identity, Culture, and Games for Social Impact", "P1 - Room 133"], ["Interactive Prompting, Chaining, and LLM Orchestration Tools", "P1 - Room 132"], ["Learning, Training, and Self-Development with AI", "P1 - Room 125"], ["Living with Robots", "M2 - Room M211/212"], ["Online Cultures and Creator Economies", "P1 - Room 116"], ["Power, Values, and the Politics of Accessibility", "P1 - Room 112"], ["Quantifying the Algorithmic Lens", "P1 - Room 131"], ["Relationships with AI", "P1 - Room 130"], ["Structural Foundations and Theories", "P1 - Room 115"], ["Textiles & Sound", "P1 - Room 120"], ["Toxicity and Moderation in Online Games", "P1 - Room 113"], ["Trust and Transparency in Everyday Life", "P1 - Room 128"], ["Virtual Reality", "P1 - Room 123"]]};
+const NOW = "11:20";
+const ICON = {
+  pin:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>',
+  route:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h7"/></svg>',
+  leaf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 4C10 4 4 9 4 16c0 2 1 4 1 4s2-1 4-1c7 0 11-6 11-15z"/><path d="M5 20c4-6 8-9 12-11"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  map:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/></svg>',
+  door:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 21h16M6 21V4h9v17M15 4l4 2v15"/><circle cx="12" cy="13" r="1"/></svg>'
+};
+
+const LAYER_ICON = {
+  quiet:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--quiet)"/><path d="M17 7c-6 0-9 3-9 7 0 1 .5 2 .5 2s1-.5 2-.5c4 0 6.5-3.5 6.5-8.5z" fill="#fff"/></svg>',
+  lift:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#3b6fd8"/><path d="M8.5 10.5 12 6.5l3.5 4zM8.5 13.5l3.5 4 3.5-4z" fill="#fff"/></svg>',
+  wc:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#7a4fd6"/><text x="12" y="15.5" text-anchor="middle" font-size="9" font-weight="800" fill="#fff" font-family="sans-serif">WC</text></svg>',
+  seat:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#6b7280"/><rect x="6.5" y="10" width="11" height="2.6" rx=".8" fill="#fff"/><rect x="7.5" y="12.6" width="1.6" height="4" fill="#fff"/><rect x="14.9" y="12.6" width="1.6" height="4" fill="#fff"/></svg>',
+  busy:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--busy)"/><path d="M6.5 10h2.5l3-2.5v9L9 14H6.5z" fill="#fff"/><path d="M14.5 9.5a3.5 3.5 0 0 1 0 5M16.5 7.5a6.3 6.3 0 0 1 0 9" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>'
+};
+
+// ---------- floors ----------
+const FLOORS = [
+  {id:"P2", label:"P2", desc:"Banquet hall · Large rooms", rooms:[], fac:[]},
+  {id:"M2", label:"M2", desc:"Small rooms · Quiet room", rooms:[], fac:[]},
+  {id:"P1", label:"P1", desc:"Paper sessions", rooms:[], fac:[]},
+  {id:"M1", label:"M1", desc:"VIP room", rooms:[], fac:[]},
+  {id:"P0", label:"P0", desc:"Entrance · Posters · Demos", rooms:[], fac:[]},
+  {id:"AUD", label:"Auditorium", desc:"Keynotes · Separate building", rooms:[], fac:[], separate:true},
+];
+const F = Object.fromEntries(FLOORS.map(f=>[f.id,f]));
+const CORR = {y:136, h:28};
+function R(floor, name, short, x, y, w, h, extra={}) { F[floor].rooms.push({name, short, x, y, w, h, floor, ...extra}); }
+function FAC(floor, type, x, label) { F[floor].fac.push({type, x, y: CORR.y + CORR.h/2, label}); }
+[["117",44],["116",29],["115",29],["114",29],["113",29]].reduce((x,[n,w])=>{R("P1","P1 - Room "+n,n,x,40,w,92);return x+w;},10);
+R("P1","P1 - Room 112","112",10,168,100,92); R("P1","P1 - Room 111","111",110,168,60,92);
+["118","119","120","121","122","123","124","125"].forEach((n,i)=>R("P1","P1 - Room "+n,n,182+i*21,62,21,70));
+["127","128","129","130","131","132","133","134"].forEach((n,i)=>R("P1","P1 - Room "+n,n,182+i*21,168,21,70));
+FAC("P1","lift",60,"Elevator A"); FAC("P1","lift",262,"Elevator B"); FAC("P1","wc",176,"Accessible restroom"); FAC("P1","wc",340,"Accessible restroom"); FAC("P1","seat",130,"Seating"); FAC("P1","seat",300,"Seating");
+[["M211/212",64],["M213/214",52],["M215/216",46],["M217",30],["M218",30],["M219",30],["M220",30],["M221",30]].reduce((x,[n,w])=>{R("M2","M2 - Room "+n,n,x,62,w,70);return x+w;},14);
+R("M2","Quiet Room","Quiet Room",150,168,90,70,{quiet:true});
+FAC("M2","lift",60,"Elevator A"); FAC("M2","lift",262,"Elevator B"); FAC("M2","wc",300,"Accessible restroom"); FAC("M2","seat",120,"Seating");
+R("P2","Banquet Hall","Banquet Hall",14,50,170,82); R("P2","P2 - Room 211","211",200,168,90,80); R("P2","P2 - Room 212","212",290,168,56,80);
+FAC("P2","lift",60,"Elevator A"); FAC("P2","lift",262,"Elevator B"); FAC("P2","wc",320,"Accessible restroom");
+R("M1","VIP Room","VIP Room",150,60,100,72); FAC("M1","lift",60,"Elevator A"); FAC("M1","lift",262,"Elevator B");
+R("P0","Area 1 + 2 + 3: posters","Posters",14,30,82,102,{busy:true}); R("P0","Area 1 + 2 + 3: demos","Demos",96,30,70,102,{busy:true});
+R("P0","Area 1 + 2 + 3: exhibits","Exhibits",166,30,62,102,{busy:true}); R("P0","Area 1 + 2 + 3: videos","Videos",228,30,44,102);
+R("P0","Area 1 + 2 + 3: theatre","Theatre",272,30,40,102); R("P0","Area 1 + 2 + 3: SIGCHI Lounge","Lounge",312,30,36,102);
+R("P0","Entrance Hall","Entrance Hall · Registration",14,168,334,82);
+FAC("P0","lift",60,"Elevator A"); FAC("P0","lift",262,"Elevator B"); FAC("P0","wc",170,"Accessible restroom"); FAC("P0","seat",330,"Seating");
+R("AUD","Auditorium","Auditorium",80,40,200,200);
+const ROOMS = {}; FLOORS.forEach(f=>f.rooms.forEach(r=>ROOMS[r.name]=r));
+
+// ---------- helpers ----------
+const S = {tab:"sched", view:"map", floor:"P1", sel:null, ssel:null, route:false, from:null, picking:false, find:null, q:""};
+const screen = document.getElementById("screen");
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const info = n => DATA.rooms[n] || {cap:null, sessions:[]};
+const isNum = r => /^\d|^M\d/.test(r.short);
+function title(n){ const r=ROOMS[n]; if(!r) return n; return isNum(r) ? "Room "+r.short : r.short; }
+function where(n){ const r=ROOMS[n]; return r.floor==="AUD" ? "Auditorium · Separate building" : "Level "+r.floor; }
+function nearLift(r){ const lifts=F[r.floor].fac.filter(x=>x.type==="lift"); if(!lifts.length) return null; const cx=r.x+r.w/2; return lifts.reduce((a,b)=>Math.abs(b.x-cx)<Math.abs(a.x-cx)?b:a); }
+function landmark(r){ const l=nearLift(r); return l ? "Near "+l.label : ""; }
+function capInfo(n){ const c=info(n).cap; if(c==null) return null; return {c, small:c<=80, pct:Math.min(100, Math.round(80/c*100))}; }
+
+function planSVG(f, selName=S.sel, withRoute=false){
+  const FD=(selName===S.sel)?S.find:null, sel=selName&&ROOMS[selName]&&ROOMS[selName].floor===f.id ? ROOMS[selName] : null;
+  let s=`<svg class="plan" viewBox="0 0 360 270" role="group" aria-label="${esc(f.label)} floor plan">
+  <defs><pattern id="busy" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="var(--busy-soft)"/><line x1="0" y1="0" x2="0" y2="7" stroke="var(--busy)" stroke-width="1.4" opacity=".55"/></pattern></defs>`;
+  if (f.id!=="AUD") s+=`<rect class="corr" x="10" y="${CORR.y}" width="340" height="${CORR.h}" rx="4"/>`;
+  f.rooms.forEach(r=>{
+    const hit = FD && ((FD==="quiet"&&r.quiet)||(FD==="busy"&&r.busy)); const dim = FD && !hit && r!==sel;
+    const cls=["room", r===sel?"sel":"", r.quiet&&r!==sel?"quiet":"", r.busy&&r!==sel?"busy":"", hit?"hit":"", dim?"dim":""].join(" ");
+    const label = title(r.name)+(r.busy?", busy and loud":"");
+    s+=`<rect class="${cls}" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="${r.quiet?10:3}" tabindex="0" role="button" aria-label="${esc(label)}" data-room="${esc(r.name)}"/>`;
+    const fs = r.w<26?7.5:(r.w<45?8.5:10); const tx=r.x+r.w/2, ty=r.y+r.h/2+3;
+    s+=`<text class="lbl ${r===sel?"sel":""}" x="${tx}" y="${ty}" text-anchor="middle" style="font-size:${fs}px${r.quiet?";fill:var(--quiet)":""}${dim?";opacity:.35":""}">${esc(r.short)}</text>`;
+    if (r.busy && !dim) s+=`<text class="sub" x="${tx}" y="${ty+11}" text-anchor="middle">BUSY · LOUD</text>`;
+  });
+  if (withRoute && S.from) s+=routeSVG(f);
+  f.fac.forEach(x=>{ const fh=FD===x.type, fdm=FD&&!fh;
+    const g = x.type==="lift" ? `<path d="M${x.x-2.6} ${x.y-1} l2.6 -3 l2.6 3z M${x.x-2.6} ${x.y+1} l2.6 3 l2.6 -3z"/>`
+      : x.type==="wc" ? `<text x="${x.x}" y="${x.y+2.4}" text-anchor="middle">WC</text>`
+      : `<rect class="g" x="${x.x-3.5}" y="${x.y-1}" width="7" height="2" rx=".5"/><rect class="g" x="${x.x-3}" y="${x.y+1}" width="1" height="2.5"/><rect class="g" x="${x.x+2}" y="${x.y+1}" width="1" height="2.5"/>`;
+    s+=`<g class="fac ${x.type}${fdm?" dim":""}"><title>${esc(x.label)}</title>${fh?`<circle class="ring" cx="${x.x}" cy="${x.y}" r="12"/>`:""}<circle cx="${x.x}" cy="${x.y}" r="7"/>${g}</g>`; });
+  if (withRoute && S.from) s+=youSVG(f);
+  if (sel){ const cx=sel.x+sel.w/2, cy=sel.y-1; s+=`<g aria-hidden="true"><path d="M${cx} ${cy} l-7 -11 a8 8 0 1 1 14 0 z" fill="var(--accent)"/><circle cx="${cx}" cy="${cy-14}" r="3" fill="#fff"/></g>`; }
+  return s+"</svg>";
+}
+
+
+const FIND = {
+  quiet:{short:"Quiet", title:"Quiet room", note:"A calm space to take a break."},
+  lift:{short:"Elevator", title:"Elevators", note:"Step-free access between levels."},
+  wc:{short:"Restroom", title:"Accessible restrooms", note:"Every restroom has a wheelchair-accessible stall."},
+  seat:{short:"Seating", title:"Seating", note:"Places to sit and rest along the corridors."},
+  busy:{short:"Busy", title:"Busy & loud areas", note:"Crowded and noisy — you may want to avoid these at peak times."}
+};
+function lvl(id){ return id==="AUD" ? "Auditorium" : "Level "+id; }
+function facNear(f,x){ const rs=f.rooms.filter(r=>!r.quiet); if(!rs.length) return ""; const r=rs.reduce((a,b)=>Math.abs(b.x+b.w/2-x.x)<Math.abs(a.x+a.w/2-x.x)?b:a); return "Near "+title(r.name); }
+function findItems(k){
+  const out=[];
+  FLOORS.forEach(f=>{
+    if (k==="quiet"||k==="busy") f.rooms.filter(r=>k==="quiet"?r.quiet:r.busy).forEach(r=>out.push({floor:f.id, name:title(r.name), meta:landmark(r), room:r.name}));
+    else f.fac.filter(x=>x.type===k).forEach(x=>out.push({floor:f.id, name:x.type==="lift"?x.label:FIND[k].title.replace(/s$/,""), meta:x.type==="lift"?"":facNear(f,x)}));
+  });
+  return out;
+}
+function setFind(k){
+  if (S.find===k){ S.find=null; render(); return; }
+  S.find=k; S.sel=null; S.route=false; S.tab="map"; S.view="map";
+  const items=findItems(k);
+  if (S.floor==="ALL" && ["quiet","busy","lift"].includes(k)) { render(); return; }
+  if (items.length && !items.some(i=>i.floor===S.floor)) S.floor=items[0].floor;
+  render();
+}
+function renderFind(p){
+  const k=S.find, cfg=FIND[k], items=findItems(k);
+  const here=items.filter(i=>i.floor===S.floor), other=items.filter(i=>i.floor!==S.floor);
+  if (S.floor==="ALL") { here.length=0; }
+  const row=i=>`<li><button class="hit-row" ${i.room?`data-open="${esc(i.room)}"`:`data-floorgo="${i.floor}"`}><span class="ic">${LAYER_ICON[k]}</span><span><b>${esc(i.name)}</b><span>${esc([i.floor===S.floor?"":lvl(i.floor), i.meta].filter(Boolean).join(" · ")||lvl(i.floor))}</span></span></button></li>`;
+  const grouped = other.reduce((m,i)=>((m[i.floor]=m[i.floor]||[]).push(i),m),{});
+  const otherHTML = k==="lift"||k==="seat"||k==="wc"
+    ? Object.entries(grouped).map(([fl,arr])=>`<li><button class="hit-row" data-floorgo="${fl}"><span class="ic">${LAYER_ICON[k]}</span><span><b>${esc(lvl(fl))}</b><span>${arr.length} ${arr.length===1?"place":"places"}</span></span></button></li>`).join("")
+    : other.map(row).join("");
+  p.innerHTML=`<button class="x" aria-label="Close">${ICON.x}</button>
+    <h2>${esc(cfg.title)}</h2><p class="meta">${esc(cfg.note)}</p>
+    ${here.length?`<div class="sec"><h3>On ${esc(lvl(S.floor))}</h3><ul class="hits">${here.map(row).join("")}</ul></div>`:""}
+    ${otherHTML?`<div class="sec"><h3>${S.floor==="ALL"?"Levels":"Other levels"}</h3><ul class="hits">${otherHTML}</ul></div>`:""}`;
+  p.querySelector(".x").onclick=()=>{S.find=null; render();};
+  p.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openRoom(b.dataset.open));
+  p.querySelectorAll("[data-floorgo]").forEach(b=>b.onclick=()=>{S.floor=b.dataset.floorgo; render();});
+}
+
+
+// ---------- directions ----------
+const ENTRANCE = "__entrance__";
+const CY = CORR.y + CORR.h/2;
+const isLvl=n=>typeof n==="string"&&n.startsWith("lvl:");
+const SCENES=[
+  {floor:"P0", text:"Registration, posters, demos"},
+  {floor:"P1", text:"Long corridor, rooms 111–134"},
+  {floor:"M2", text:"Small rooms, quiet room"},
+  {floor:"P2", text:"Banquet hall"},
+  {floor:"M1", text:"VIP room"},
+  {floor:"AUD", text:"Auditorium"}];
+function lastSession(){ let best=null; Object.entries(DATA.rooms).forEach(([n,d])=>{ if(!ROOMS[n]) return; d.sessions.forEach(([a,b,tt])=>{ if(b<=NOW && (!best||b>best.end)) best={room:n,end:b,title:tt}; }); }); return best; }
+function doorOf(name){ if(name===ENTRANCE) return {x:180, y:250, floor:"P0"}; if(isLvl(name)){ const fl=name.slice(4); return {x:180, y:CY, floor:fl, unknown:true}; } const r=ROOMS[name]; return {x:r.x+r.w/2, y:r.y>CORR.y?r.y:r.y+r.h, floor:r.floor}; }
+function fromLabel(n){ return n===ENTRANCE ? "Main entrance" : isLvl(n) ? "On "+lvl(n.slice(4)) : title(n); }
+function liftOn(floor, label){ return F[floor].fac.find(x=>x.type==="lift"&&x.label===label); }
+function routeLift(){ const to=ROOMS[S.sel]; const fromFloor=doorOf(S.from).floor;
+  const ref = to.floor!=="AUD" ? to : null; const l = ref ? nearLift(ref) : nearLift(S.from===ENTRANCE?{floor:"P0",x:170,w:20}:{floor:doorOf(S.from).floor,x:doorOf(S.from).x,w:0}); return l ? l.label : "Elevator A"; }
+function setFrom(name){ S.from=name; S.picking=false; S.floor=doorOf(name).floor; render(); }
+function planRoute(){
+  const to=ROOMS[S.sel], a=doorOf(S.from), b=doorOf(S.sel), L=routeLift(), toName=title(S.sel);
+  if (S.from===S.sel) return [{floor:to.floor, text:`You're already at ${toName}`}];
+  if (to.floor==="AUD"){
+    const s=[]; if(a.floor!=="P0") s.push({floor:a.floor, text:`Take ${L} down to Level P0`});
+    s.push({floor:"P0", text:`Leave the main building`}, {floor:"AUD", text:`Walk about 500 steps to the Auditorium — seating along the way`}); return s; }
+  const near = nearLift(to)?", next to "+nearLift(to).label:"";
+  if (a.floor==="AUD"){ const s=[{floor:"AUD", text:`Walk about 500 steps back to the main building (Level P0) — seating along the way`}];
+    if (to.floor==="P0") s.push({floor:"P0", text:`Follow the corridor to ${toName}`});
+    else s.push({floor:"P0", text:`Go to ${L} and take it to Level ${to.floor} — no stairs or escalators`},{floor:to.floor, text:`Follow the corridor to ${toName}${near}`});
+    return s; }
+  if (isLvl(S.from)){
+    if (a.floor===to.floor) return [{floor:a.floor, text:`Find the main corridor — room numbers are on every door`},{floor:a.floor, text:`Follow it to ${toName}${near}`}];
+    return [{floor:a.floor, text:`Go to the nearest elevator`},{floor:a.floor, text:`Take it to Level ${to.floor} — no stairs or escalators`},{floor:to.floor, text:`Follow the corridor to ${toName}${near}`}]; }
+  if (a.floor===to.floor) return [
+    {floor:a.floor, text:S.from===ENTRANCE?`From the main entrance, walk into the corridor`:`Leave ${fromLabel(S.from)} into the corridor`},
+    {floor:a.floor, text:`Follow the corridor to ${toName}${nearLift(to)?", next to "+nearLift(to).label:""}`}];
+  return [
+    {floor:a.floor, text:S.from===ENTRANCE?`From the main entrance, go to ${L} (about 50 steps)`:`Leave ${fromLabel(S.from)} and go to ${L}`},
+    {floor:a.floor, text:`Take ${L} to Level ${to.floor} — no stairs or escalators`},
+    {floor:to.floor, text:`Follow the corridor to ${toName}`}];
+}
+function routeSVG(f){
+  const to=ROOMS[S.sel], a=doorOf(S.from), b=doorOf(S.sel), L=routeLift();
+  if (S.from===S.sel) return "";
+  let pts=null, s="";
+  if (a.floor==="AUD" && to.floor!=="AUD"){ const l=liftOn("P0",L); if(f.id==="P0") pts = to.floor==="P0" ? [[180,250],[180,CY],[b.x,CY],[b.x,b.y]] : (l?[[180,250],[180,CY],[l.x,CY]]:null); }
+  if (a.unknown && f.id===a.floor && f.id!==to.floor) pts=null;
+  else if (a.unknown && f.id===a.floor) pts=[[b.x,CY],[b.x,b.y]];
+  else if (pts) {}
+  else if (f.id===a.floor && f.id===to.floor) pts=[[a.x,a.y],[a.x,CY],[b.x,CY],[b.x,b.y]];
+  else if (f.id===a.floor && to.floor!=="AUD"){ const l=liftOn(f.id,L); if(l) pts=[[a.x,a.y],[a.x,CY],[l.x,CY]]; }
+  else if (f.id===to.floor && to.floor!=="AUD"){ const l=liftOn(f.id,L); if(l) pts=[[l.x,CY],[b.x,CY],[b.x,b.y]]; }
+  else if (f.id===a.floor && to.floor==="AUD") pts=[[a.x,a.y],[a.x,CY],[350,CY]];
+  if (pts) s+=`<polyline class="route" points="${pts.map(p=>p.join(",")).join(" ")}"/>`;
+  return s;
+}
+function youSVG(f){ if(S.from===S.sel) return ""; const a=doorOf(S.from); let s=""; if(a.unknown) return s;
+  if (f.id===a.floor) s+=`<g aria-hidden="true"><circle cx="${a.x}" cy="${a.y}" r="7" fill="#3b6fd8" stroke="#fff" stroke-width="2.5"/><text x="${a.x}" y="${a.y+(a.y>CY?16:-10)}" text-anchor="middle" style="font-size:7px;font-weight:800;fill:#3b6fd8">YOU</text></g>`;
+  return s;
+}
+function renderRoute(p){
+  const to=ROOMS[S.sel];
+  const head=`<button class="back" id="routeBack">← ${esc(title(S.sel))}</button><h2>Directions</h2>`;
+  if (!S.from){
+    const ls=lastSession();
+    const def = ls ? {name:ls.room, b:`Just left ${title(ls.room)}`, s:`${ls.title} · ended ${ls.end}`, ic:ICON.door}
+                   : {name:ENTRANCE, b:"Main entrance", s:"Level P0 · Registration", ic:ICON.door};
+    p.innerHTML=`${head}<p class="meta">To ${esc(title(S.sel))} · ${esc(lvl(to.floor))}</p>
+      <div class="sec"><h3>Where are you now?</h3>
+        <button class="quick" id="fromDef"><span class="ic" style="background:var(--surface-2)">${def.ic}</span><span><b>${esc(def.b)}</b><span>${esc(def.s)}</span></span></button>
+        <label class="fromsel"><span>Or type the nearest door number or sign</span><input id="fromQ" type="search" autocomplete="off" placeholder="e.g. 120, M215, Banquet Hall"></label>
+        <div class="fromres" id="fromRes" role="listbox" aria-label="Matching places"></div></div>
+      <div class="sec"><h3>No sign nearby? What's around you?</h3>
+        <div class="scenes">${SCENES.map(c=>`<button data-lvl="${c.floor}">${esc(c.text)}</button>`).join("")}</div>
+        <p class="srcline">Still unsure? Every elevator shows the level.</p></div>`;
+    document.getElementById("fromDef").onclick=()=>setFrom(def.name);
+    const q=document.getElementById("fromQ"), res=document.getElementById("fromRes");
+    q.oninput=()=>{ const v=q.value.trim().toLowerCase(); if(!v){res.innerHTML=""; return;}
+      const key=n=>{ const s=title(n).toLowerCase().replace(/^room /,""); return s.startsWith(v)?0:1; };
+      const hits=Object.keys(ROOMS).filter(n=>title(n).toLowerCase().includes(v)||n.toLowerCase().includes(v)).sort((a,b)=>key(a)-key(b)||title(a).localeCompare(title(b),undefined,{numeric:true})).slice(0,4);
+      res.innerHTML = hits.length ? hits.map(n=>`<button role="option" data-from="${esc(n)}"><b>${esc(title(n))}</b><span>${esc(lvl(ROOMS[n].floor))}</span></button>`).join("")
+        : `<p class="srcline">No match — try the number on the nearest door.</p>`;
+      res.querySelectorAll("[data-from]").forEach(b=>b.onclick=()=>setFrom(b.dataset.from)); };
+    q.onkeydown=e=>{ if(e.key==="Enter"){ const b=res.querySelector("[data-from]"); if(b) b.click(); } };
+    p.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>setFrom(b.dataset.lvl==="AUD"?"Auditorium":"lvl:"+b.dataset.lvl));
+  } else {
+    const steps=planRoute(), fl=[...new Set(steps.map(s=>s.floor))];
+    p.innerHTML=`${head}
+      <div class="ft"><div><span class="dot you"></span><b>${esc(fromLabel(S.from))}</b><span>${esc(lvl(doorOf(S.from).floor))}</span><button id="changeFrom">Change</button></div>
+        <div><span class="dot to"></span><b>${esc(title(S.sel))}</b><span>${esc(lvl(to.floor))}</span></div></div>
+      ${fl.length>1?`<div class="sec"><h3>Your trip</h3><div class="tripbox">${overviewSVG(true)}</div></div>`:""}
+      <div class="sec"><h3>Step-free route</h3><ol class="steps">${steps.map(s=>`<li><span>${esc(s.text)}${fl.length>1?` <button class="flv" data-showfloor="${s.floor}" aria-pressed="${s.floor===S.floor}">${esc(s.floor==="AUD"?"Aud.":s.floor)}</button>`:""}</span></li>`).join("")}</ol></div>`;
+    document.getElementById("changeFrom").onclick=()=>{S.from=null; render();};
+    p.querySelectorAll("[data-showfloor]").forEach(b=>b.onclick=()=>{S.floor=b.dataset.showfloor; render();});
+  }
+  document.getElementById("routeBack").onclick=()=>{S.route=false; S.from=null; S.picking=false; S.floor=to.floor; render();};
+}
+
+
+// ---------- all-levels overview ----------
+const STACK = ["P2","M2","P1","M1","P0"];
+function overviewSVG(compact=false){
+  const W=compact?300:250, D=compact?44:40, SK=46, X0=compact?70:140, GAP=compact?60:66, TOP=18;
+  const tgt = S.sel && ROOMS[S.sel] ? ROOMS[S.sel] : null;
+  const fromD = S.route && S.from ? doorOf(S.from) : null;
+  const H = TOP + GAP*STACK.length + 40;
+  const pt=(i,x,y)=>{ const u=(x-10)/340, v=Math.max(0,Math.min(1,(y-30)/230)), yy=TOP+i*GAP; return [X0+SK*(1-v)+W*u, yy+D*v]; };
+  const poly=(i,r)=>[pt(i,r.x,r.y),pt(i,r.x+r.w,r.y),pt(i,r.x+r.w,r.y+r.h),pt(i,r.x,r.y+r.h)].map(q=>q.map(n=>n.toFixed(1)).join(",")).join(" ");
+  let s=`<svg class="ov" viewBox="0 0 520 ${H}" role="group" aria-label="All levels, top to bottom: ${STACK.join(", ")}, plus the Auditorium in a separate building">
+    <defs><pattern id="ovbusy" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="var(--busy-soft)"/><line x1="0" y1="0" x2="0" y2="5" stroke="var(--busy)" stroke-width="1.2" opacity=".6"/></pattern></defs>`;
+  // elevator shafts
+  const lifts=[60,262];
+  lifts.forEach(x=>{ const a=pt(0,x,150), b=pt(STACK.length-1,x,150); s+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" class="shaft${S.find==="lift"?" on":""}"/>`; });
+  STACK.forEach((id,i)=>{
+    const f=F[id], yy=TOP+i*GAP, act=S.floor===id, isT=tgt&&tgt.floor===id, isF=fromD&&fromD.floor===id;
+    const slab=`${X0+SK},${yy} ${X0+SK+W},${yy} ${X0+W},${yy+D} ${X0},${yy+D}`;
+    s+=`<g class="slab${act?" act":""}${isT?" tgt":""}${isF?" frm":""}" data-floor="${id}" tabindex="0" role="button" aria-label="Level ${id}: ${esc(f.desc)}${isT?", your destination":""}${isF?", you are here":""}">
+      <polygon class="side" points="${X0},${yy+D} ${X0+W},${yy+D} ${X0+W},${yy+D+5} ${X0},${yy+D+5}"/>
+      <polygon class="top" points="${slab}"/>`;
+    if (id!=="M1") s+=`<polygon class="cor" points="${poly(i,{x:10,y:CORR.y,w:340,h:CORR.h})}"/>`;
+    f.rooms.forEach(r=>{
+      if (r.quiet) s+=`<polygon class="z-quiet${S.find==="quiet"?" on":""}" points="${poly(i,r)}"/>`;
+      else if (r.busy) s+=`<polygon class="z-busy${S.find==="busy"?" on":""}" points="${poly(i,r)}"/>`;
+      if (isT && r===tgt) s+=`<polygon class="z-tgt" points="${poly(i,r)}"/>`;
+    });
+    lifts.forEach(x=>{ const q=pt(i,x,150); s+=`<circle cx="${q[0]}" cy="${q[1]}" r="${S.find==="lift"?4.5:3.5}" class="ldot"/>`; });
+    if (isF && S.from && !fromD.unknown){ const q = S.from===ENTRANCE ? pt(i,180,250) : pt(i,doorOf(S.from).x,doorOf(S.from).y); s+=`<circle cx="${q[0]}" cy="${q[1]}" r="5" class="you"/>`; }
+    if (isT){ const c=pt(i,tgt.x+tgt.w/2,tgt.y); s+=`<path d="M${c[0]} ${c[1]} l-5 -8 a6 6 0 1 1 10 0 z" class="pinm"/>`; }
+    s+=compact ? `<text x="10" y="${yy+D/2+8}" class="lv" style="font-size:22px">${id}</text></g>` : `<text x="10" y="${yy+D/2}" class="lv">${id}</text><text x="10" y="${yy+D/2+13}" class="ld">${esc(f.desc)}</text></g>`;
+  });
+  // auditorium
+  // route across levels
+  if (fromD && tgt && fromD.floor!==tgt.floor && tgt.floor!=="AUD" && !(fromD.floor==="AUD"&&tgt.floor==="P0")){
+    const L=routeLift(), lx=(liftOn(tgt.floor,L)||{x:60}).x, i1=STACK.indexOf(fromD.floor==="AUD"?"P0":fromD.floor), i2=STACK.indexOf(tgt.floor);
+    if (i1>=0&&i2>=0){ const a=pt(i1,lx,150), b=pt(i2,lx,150); s+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" class="trip"/>`; }
+  }
+  if (compact) return s+`</svg>`;
+  const ay=TOP+(STACK.length-1)*GAP+6, ax=420, aud=F.AUD, isT=tgt&&tgt.floor==="AUD";
+  s+=`<g class="slab aud${S.floor==="AUD"?" act":""}${isT?" tgt":""}" data-floor="AUD" tabindex="0" role="button" aria-label="Auditorium, separate building${isT?", your destination":""}">
+     <polygon class="side" points="${ax},${ay+34} ${ax+70},${ay+34} ${ax+70},${ay+39} ${ax},${ay+39}"/>
+     <polygon class="top" points="${ax+22},${ay} ${ax+92},${ay} ${ax+70},${ay+34} ${ax},${ay+34}"/>
+     ${isT?`<polygon class="z-tgt" points="${ax+22},${ay} ${ax+92},${ay} ${ax+70},${ay+34} ${ax},${ay+34}"/>`:""}
+     <text x="${ax+46}" y="${ay+52}" text-anchor="middle" class="ld">Auditorium</text></g>
+     <line x1="${X0+W+4}" y1="${ay+22}" x2="${ax-4}" y2="${ay+22}" class="walk"/>`;
+  return s+`</svg>`;
+}
+
+// ---------- render ----------
+function render(){
+  document.querySelectorAll(".side [data-tab]").forEach(b=>b.dataset.tab===S.tab ? b.setAttribute("aria-current","page") : b.removeAttribute("aria-current"));
+  document.getElementById("viewseg").style.visibility = (S.tab==="map" && !S.q) ? "visible" : "hidden";
+  document.querySelectorAll("#viewseg button").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.view===S.view)));
+  if (S.q) return renderSearch();
+  if (S.tab==="sched") return renderSched();
+  if (S.view==="list") return renderList();
+  renderMap();
+}
+
+function renderSched(){
+  const cards = DATA.slot.map(([t,room])=>{ const r=ROOMS[room], c=capInfo(room);
+    return `<button class="card" data-room="${esc(room)}" aria-pressed="${S.ssel===room}">
+      <span><span class="t">${esc(t)}</span><br><span class="k">11:15 – 12:45</span></span>
+      <span class="loc"><b>${ICON.pin}${esc(r.floor==="AUD"?"Auditorium":r.floor+" · "+title(room))}</b><span class="lm">${esc(landmark(r))}</span>${c&&c.small?`<span class="badge">Small room · may fill up</span>`:""}</span></button>`; }).join("");
+  let pv;
+  if (S.ssel) { const r=ROOMS[S.ssel], c=capInfo(S.ssel);
+    pv=`<button class="x" id="pvClose" aria-label="Close">${ICON.x}</button><h2>${esc(title(S.ssel))}</h2><p class="meta">${esc(where(S.ssel))}${landmark(r)?" · "+esc(landmark(r)):""}</p>
+      <div class="pvmap">${planSVG(F[r.floor], S.ssel)}</div>
+      <div class="facts">
+        <div class="fact"><h3>Capacity</h3>${c?c.c+" seats"+(c.small?" · may fill up":""):"—"}</div>
+        <div class="fact"><h3>Step-free</h3><span class="tag ok">Confirmed</span></div>
+        <div class="fact"><h3>Nearest rest</h3>Quiet Room · Level M2</div>
+        <div class="fact"><h3>Hearing loop</h3><span class="tag no">Not available</span></div>
+      </div>
+      <div class="actions"><button class="btn primary" id="pvRoute">${ICON.route}Directions</button><button class="btn ghost" id="pvOpen">${ICON.map}Open in map</button></div>`; }
+  screen.innerHTML = `<div class="schedview${S.ssel?" open":""}"><div class="slist">
+      <div class="shead"><h1>Program</h1><span>${DATA.slot.length} sessions at 11:15${S.ssel?"":" · select one to see where it is"}</span></div>
+      <div class="days" aria-hidden="true"><button aria-pressed="true">Mon 13</button><button>Tue 14</button><button>Wed 15</button><button>Thu 16</button><button>Fri 17</button></div>
+      <div class="cards">${cards}</div></div>
+    ${S.ssel?`<aside class="preview" aria-label="Location">${pv}</aside>`:""}</div>`;
+  screen.querySelectorAll(".card").forEach(b=>b.onclick=()=>{S.ssel = S.ssel===b.dataset.room ? null : b.dataset.room; render();});
+  const pc=document.getElementById("pvClose"); if(pc) pc.onclick=()=>{S.ssel=null; render();};
+  const o=document.getElementById("pvOpen"); if(o) o.onclick=()=>openRoom(S.ssel);
+  const rt=document.getElementById("pvRoute"); if(rt) rt.onclick=()=>openRoom(S.ssel,true);
+}
+
+function renderMap(){
+  const ALL=S.floor==="ALL", f=ALL?null:F[S.floor];
+  const floors = `<button data-floor="ALL" class="allbtn" aria-pressed="${ALL}" aria-label="All levels" title="All levels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></button>` + FLOORS.map(x=>(x.separate?`<span class="gap" aria-hidden="true"></span>`:"")+
+    `<button data-floor="${x.id}" class="${x.separate?"aud":""}" aria-pressed="${x.id===S.floor}" aria-label="${esc(x.label==="Auditorium"?"Auditorium":"Level "+x.label)}" title="${esc(x.desc)}">${esc(x.separate?"Aud.":x.label)}</button>`).join("");
+  const layers = Object.entries(FIND).map(([k,v])=>`<button class="lyr" data-find="${k}" aria-pressed="${S.find===k}" title="${esc(v.title)}">${LAYER_ICON[k]}<span>${esc(v.short)}</span></button>`).join("");
+  const open = !!(S.sel || S.find || S.route);
+  screen.innerHTML = `<div class="mapview${open?" open":""}">
+    <section class="center"><h1>${ALL?"All levels<span>Top to bottom · tap a level to open it</span>":esc(f.label==="Auditorium"?"Auditorium":"Level "+f.label)+"<span>"+esc(f.desc)+"</span>"}</h1>
+      <div class="canvas${S.picking?" picking":""}">${ALL?overviewSVG():planSVG(f, S.sel, S.route)}
+        ${!open?`<button class="nextchip" data-open="P1 - Room 129">${ICON.pin}<span><em>Next</em> AI &amp; Timing Matters · P1 · Room 129</span><b aria-hidden="true">→</b></button>`:""}
+        <nav class="floorbar" aria-label="Floors">${floors}</nav>
+        <div class="layerbar" role="group" aria-label="Find on map">${layers}</div></div></section>
+    ${open?`<aside class="panel" id="panel" aria-label="Details"></aside>`:""}</div>`;
+  screen.querySelectorAll("[data-floor]").forEach(b=>{ b.onclick=()=>{ const toLevel=b.classList.contains("slab"); S.floor=b.dataset.floor; if(!S.route && !(toLevel && S.sel && ROOMS[S.sel].floor===S.floor)){S.sel=null;} render(); };
+    if (b.classList.contains("slab")) b.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault(); b.onclick();} }); });
+  const cp=document.getElementById("cancelPick"); if(cp) cp.onclick=()=>{S.picking=false; S.floor=ROOMS[S.sel].floor; render();};
+  screen.querySelectorAll("[data-find]").forEach(b=>b.onclick=()=>setFind(b.dataset.find));
+  screen.querySelectorAll(".nextchip").forEach(b=>b.onclick=()=>openRoom(b.dataset.open));
+  screen.querySelectorAll(".room").forEach(el=>{ const go=()=>{ if(S.picking){ setFrom(el.dataset.room); return; } S.sel=el.dataset.room; S.find=null; S.route=false; S.from=null; render();};
+    el.addEventListener("click",go); el.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();go();} }); });
+  renderPanel();
+}
+
+function a11yList(){ return `<ul class="a11y">
+  <li>Wheelchair access<span class="tag ok">Confirmed</span></li>
+  <li>Microphones for speakers & Q&A<span class="tag ok">Confirmed</span></li>
+  <li>Hearing loop<span class="tag no">Not available</span></li>
+  <li>Reserved front seating<span class="tag unk">Unknown</span></li>
+  <li>Live captions<span class="tag unk">Unknown</span></li></ul>
+  <p class="srcline">From the <a href="https://programs.sigchi.org/chi/2026/access" target="_blank" rel="noopener">CHI accessibility FAQ</a></p>`; }
+
+function renderPanel(){
+  const p=document.getElementById("panel"); if(!p) return;
+  if (S.find && !S.sel) return renderFind(p);
+  if (!S.sel){
+    p.innerHTML=`<div class="empty"><h2>Find your way</h2><p>Tap a room on the map, or:</p>
+      <button class="quick" data-open="P1 - Room 129"><span class="ic" style="background:var(--accent-soft);color:var(--accent-ink)">${ICON.pin}</span><span><b>My next session</b><span>AI &amp; Timing Matters · P1 · Room 129</span></span></button>
+      <button class="quick" data-findgo="quiet"><span class="ic" style="background:var(--quiet-soft);color:var(--quiet)">${ICON.leaf}</span><span><b>Find a quiet room</b><span>Level M2</span></span></button>
+      <button class="quick" data-findgo="wc"><span class="ic" style="background:#ece6fb">${LAYER_ICON.wc}</span><span><b>Find a restroom</b><span>Accessible restrooms nearby</span></span></button></div>`;
+    p.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openRoom(b.dataset.open));
+    p.querySelectorAll("[data-findgo]").forEach(b=>b.onclick=()=>setFind(b.dataset.findgo));
+    p.querySelectorAll("[data-floorgo]").forEach(b=>b.onclick=()=>{S.floor=b.dataset.floorgo; render();});
+    return;
+  }
+  if (S.route) return renderRoute(p);
+  const r=ROOMS[S.sel], d=info(S.sel), lm=landmark(r);
+  const route = `<button class="btn primary" id="routeBtn">${ICON.route}Directions</button>`;
+  if (r.quiet){
+    p.innerHTML=`<button class="x" aria-label="Close">${ICON.x}</button><h2>Quiet Room</h2><p class="meta">Level M2${lm?" · "+esc(lm):""}</p>${route}
+      <div class="sec"><h3>About this space</h3><ul class="a11y"><li>On Level M2, with signage<span class="tag ok">Confirmed</span></li><li>Exact location<span class="tag unk">Unconfirmed</span></li><li>Opening hours<span class="tag unk">Unknown</span></li></ul></div>`;
+  } else {
+    const c=capInfo(S.sel);
+    const sess = d.sessions.map(([a,b,t])=>`<div class="ses"><span class="t">${a} – ${b}</span><span>${esc(t)}${a<=NOW&&NOW<b?'<span class="live">NOW</span>':""}</span></div>`).join("") || `<p class="srcline">No sessions today.</p>`;
+    p.innerHTML=`<button class="x" aria-label="Close">${ICON.x}</button><h2>${esc(title(S.sel))}</h2><p class="meta">${esc(where(S.sel))}${lm?" · "+esc(lm):""}</p>${route}
+      <div class="sec"><h3>Today</h3>${sess}</div>
+      ${c?`<div class="sec"><h3>Capacity</h3><div class="cap-row"><span class="meter"><b style="width:${c.small?90:c.c>=500?25:55}%"></b></span>${c.c} seats${c.small?" · may fill up — arrive early":""}</div></div>`:""}
+      <div class="sec"><h3>Accessibility</h3>${a11yList()}</div>
+      <div class="sec"><h3>Need a break?</h3><button class="rest" id="toQuiet"><span class="ic">${ICON.leaf}</span><span><b>Quiet Room</b><span>Level M2 · by elevator</span></span></button></div>`;
+  }
+  p.querySelector(".x").onclick=()=>{S.sel=null; S.route=false; S.from=null; render();};
+  const rb=document.getElementById("routeBtn"); if(rb) rb.onclick=()=>{S.route=true; S.from=null; S.picking=false; render();};
+  const tq=document.getElementById("toQuiet"); if(tq) tq.onclick=()=>openRoom("Quiet Room");
+}
+
+function renderList(){
+  const typeIcon={lift:"lift",wc:"wc",seat:"seat"};
+  const idx = FLOORS.map(f=>`<a href="#lv-${f.id}" data-jump="${f.id}"><b>${esc(f.label==="Auditorium"?"Auditorium":f.label)}</b><span>${f.rooms.length} ${f.rooms.length===1?"space":"spaces"}</span></a>`).join("");
+  const secs = FLOORS.map(f=>{
+    const facs=[...new Map(f.fac.map(x=>[x.type,x])).values()];
+    const facHTML = facs.length ? `<div class="facs">${facs.map(x=>{ const n=f.fac.filter(y=>y.type===x.type).length; const name={lift:"Elevator",wc:"Accessible restroom",seat:"Seating"}[x.type];
+      return `<span class="fchip">${LAYER_ICON[typeIcon[x.type]]}${esc(name)}${n>1?` ×${n}`:""}</span>`; }).join("")}</div>` : "";
+    const rooms=f.rooms.map(r=>{ const c=info(r.name).cap; const m=[c?c+" seats":"", landmark(r)].filter(Boolean).join(" · ");
+      const tag = r.quiet?`<span class="rtag q">Quiet</span>`:r.busy?`<span class="rtag b">Busy</span>`:"";
+      return `<li><button data-room="${esc(r.name)}"><span class="rn">${esc(title(r.name))}${tag}</span><span class="m">${esc(m)}</span></button></li>`; }).join("");
+    return `<section class="lsec" id="lv-${f.id}" aria-labelledby="lh-${f.id}">
+      <h2 id="lh-${f.id}">${esc(f.label==="Auditorium"?"Auditorium":"Level "+f.label)}<span>${esc(f.desc)}</span></h2>
+      ${facHTML}<ul class="rgrid">${rooms}</ul></section>`; }).join("");
+  screen.innerHTML = `<div class="listview2" id="lv"><nav class="lindex" aria-label="Jump to level">${idx}</nav><div class="lbody">${secs}</div></div>`;
+  const box=document.getElementById("lv");
+  const links=[...box.querySelectorAll("[data-jump]")];
+  let lock=null;
+  links.forEach(a=>a.onclick=e=>{ e.preventDefault(); lock=a.dataset.jump; setTimeout(()=>{lock=null;},900); links.forEach(x=>x.setAttribute("aria-current", x===a?"true":"false")); const sec=document.getElementById("lv-"+a.dataset.jump);
+    box.scrollTo({top: sec.offsetTop - box.querySelector(".lindex").offsetHeight - 8, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"}); sec.querySelector("h2").setAttribute("tabindex","-1"); sec.querySelector("h2").focus({preventScroll:true}); });
+  const spy=()=>{ if(lock) return; const top=box.scrollTop + box.querySelector(".lindex").offsetHeight + 20; let cur=FLOORS[0].id;
+    FLOORS.forEach(f=>{ if(document.getElementById("lv-"+f.id).offsetTop<=top) cur=f.id; });
+    links.forEach(a=>a.setAttribute("aria-current", a.dataset.jump===cur ? "true" : "false")); };
+  box.addEventListener("scroll", spy); spy();
+  screen.querySelectorAll("[data-room]").forEach(b=>b.onclick=()=>openRoom(b.dataset.room));
+}
+
+function renderSearch(){
+  const q=S.q.toLowerCase(), hits=[];
+  Object.values(ROOMS).forEach(r=>{ const t=title(r.name); if(t.toLowerCase().includes(q)||r.name.toLowerCase().includes(q)) hits.push([t, r.name, where(r.name)]); });
+  Object.entries(DATA.rooms).forEach(([room,v])=>v.sessions.forEach(([a,b,t])=>{ if(t.toLowerCase().includes(q)&&ROOMS[room]) hits.push([t, room, `${a} · ${ROOMS[room].floor==="AUD"?"Auditorium":ROOMS[room].floor+" · "+title(room)}`]); }));
+  FLOORS.forEach(f=>[...new Set(f.fac.map(x=>x.label))].forEach(l=>{ if(l.toLowerCase().includes(q)) hits.push([l, null, f.label==="Auditorium"?"Auditorium":"Level "+f.label]); }));
+  const seen=new Set(), uniq=hits.filter(h=>{const k=h[0]+h[2]; if(seen.has(k)) return false; seen.add(k); return true;}).slice(0,40);
+  screen.innerHTML = `<div class="results"><h1>${uniq.length} result${uniq.length===1?"":"s"} for “${esc(S.q)}”</h1>${uniq.length?`<ul>${uniq.map(([t,room,m])=>`<li>${room?`<button data-room="${esc(room)}">`:"<div>"}<span>${esc(t)}</span><span class="m">${esc(m)}</span>${room?"</button>":"</div>"}</li>`).join("")}</ul>`:`<p class="none">No results. Try “129”, “quiet”, or “AI”.</p>`}</div>`;
+  screen.querySelectorAll("[data-room]").forEach(b=>b.onclick=()=>{ document.getElementById("q").value=""; S.q=""; openRoom(b.dataset.room); });
+}
+
+function openRoom(name, route=false){ const r=ROOMS[name]; if(!r) return; S.tab="map"; S.view="map"; S.floor=r.floor; S.sel=name; S.route=route; S.from=null; S.picking=false; S.find=null; render(); screen.focus(); }
+
+document.querySelectorAll(".side [data-tab]").forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab; S.q=""; document.getElementById("q").value=""; S.route=false; render();});
+document.querySelectorAll("#viewseg button").forEach(b=>b.onclick=()=>{S.view=b.dataset.view; render();});
+document.getElementById("q").addEventListener("input",e=>{S.q=e.target.value.trim(); render();});
+render();
+</script>
+</body>
+</html>
