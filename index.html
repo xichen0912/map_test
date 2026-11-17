@@ -213,6 +213,18 @@ svg.plan{width:100%;height:auto;max-height:100%;display:block}
 .results li button{cursor:pointer}.results li button:hover{background:var(--surface-2)}
 .results .m{margin-left:auto;color:var(--muted);font-size:13px}
 .results .none{color:var(--muted)}
+.results ul.intents{margin-bottom:12px;border-color:var(--line-2)}
+.results .intent{align-items:center}
+.results .intent .ic{width:28px;height:28px;flex:none}.results .intent .ic svg{width:28px;height:28px}
+.results .intent b{display:block;font-size:14.5px}.results .intent span span{display:block;color:var(--muted);font-size:12.5px}
+.results .intent .m{color:var(--accent-ink);font-weight:600}
+.results .hint{color:var(--muted);font-size:13px;margin:0 0 8px}
+.retback{align-self:flex-start;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);font:inherit;font-size:13.5px;font-weight:600;border-radius:999px;padding:6px 14px;margin:0;cursor:pointer;box-shadow:var(--shadow)}
+.retback:hover{border-color:var(--ink)}
+.ropts{display:grid;gap:6px}
+.ropts button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:9px 12px;cursor:pointer;font:inherit}
+.ropts button b{font-size:14px;color:var(--ink)}.ropts button span{font-size:12.5px;color:var(--muted)}
+.ropts button[aria-checked="true"]{border-color:#3b6fd8;box-shadow:inset 0 0 0 1px #3b6fd8;background:color-mix(in srgb,#3b6fd8 6%,var(--surface))}
 
 .canvas.picking svg,.canvas.picking .room{cursor:crosshair}
 .canvas.picking .room:hover{fill:#e3ebfb;stroke:#3b6fd8}
@@ -307,7 +319,7 @@ svg.ov{width:100%;height:auto;max-height:100%;display:block}
   <div class="main">
     <header class="topbar">
       <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="sr">Search</span>
-        <input id="q" type="search" placeholder="Search rooms, sessions, or facilities" autocomplete="off"></label>
+        <input id="q" type="search" placeholder="Search rooms, sessions, or needs — e.g. quiet, wheelchair" autocomplete="off"></label>
       <div class="seg" role="group" aria-label="View" id="viewseg">
         <button data-view="map" aria-pressed="true">Map</button>
         <button data-view="list" aria-pressed="false">List</button>
@@ -371,7 +383,7 @@ R("AUD","Auditorium","Auditorium",80,40,200,200);
 const ROOMS = {}; FLOORS.forEach(f=>f.rooms.forEach(r=>ROOMS[r.name]=r));
 
 // ---------- helpers ----------
-const S = {tab:"sched", view:"map", floor:"P1", sel:null, ssel:null, route:false, from:null, picking:false, find:null, q:""};
+const S = {tab:"sched", view:"map", floor:"P1", sel:null, ssel:null, route:false, from:null, picking:false, find:null, q:"", ret:null, lift:null};
 const screen = document.getElementById("screen");
 const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const info = n => DATA.rooms[n] || {cap:null, sessions:[]};
@@ -387,7 +399,7 @@ function planSVG(f, selName=S.sel, withRoute=false){
   let s=`<svg class="plan" viewBox="0 0 360 270" role="group" aria-label="${esc(f.label)} floor plan">
   <defs><pattern id="busy" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="var(--busy-soft)"/><line x1="0" y1="0" x2="0" y2="7" stroke="var(--busy)" stroke-width="1.4" opacity=".55"/></pattern></defs>`;
   if (f.id!=="AUD") s+=`<rect class="corr" x="10" y="${CORR.y}" width="340" height="${CORR.h}" rx="4"/>`;
-  f.rooms.forEach(r=>{
+  [...f.rooms].sort((a,b)=>(a===sel)-(b===sel)).forEach(r=>{
     const hit = FD && ((FD==="quiet"&&r.quiet)||(FD==="busy"&&r.busy)); const dim = FD && !hit && r!==sel;
     const cls=["room", r===sel?"sel":"", r.quiet&&r!==sel?"quiet":"", r.busy&&r!==sel?"busy":"", hit?"hit":"", dim?"dim":""].join(" ");
     const label = title(r.name)+(r.busy?", busy and loud":"");
@@ -467,9 +479,16 @@ function lastSession(){ let best=null; Object.entries(DATA.rooms).forEach(([n,d]
 function doorOf(name){ if(name===ENTRANCE) return {x:180, y:250, floor:"P0"}; if(isLvl(name)){ const fl=name.slice(4); return {x:180, y:CY, floor:fl, unknown:true}; } const r=ROOMS[name]; return {x:r.x+r.w/2, y:r.y>CORR.y?r.y:r.y+r.h, floor:r.floor}; }
 function fromLabel(n){ return n===ENTRANCE ? "Main entrance" : isLvl(n) ? "On "+lvl(n.slice(4)) : title(n); }
 function liftOn(floor, label){ return F[floor].fac.find(x=>x.type==="lift"&&x.label===label); }
-function routeLift(){ const to=ROOMS[S.sel]; const fromFloor=doorOf(S.from).floor;
+function routeView(){ const fl=doorOf(S.from).floor; return (fl==="AUD" && ROOMS[S.sel].floor!=="AUD") ? "P0" : fl; }
+function defaultFrom(){ const ls=lastSession(); return ls ? ls.room : ENTRANCE; }
+function liftOptions(){ const to=ROOMS[S.sel]; if(!S.from||S.from===S.sel) return [];
+  const f1=doorOf(S.from).floor==="AUD"?"P0":doorOf(S.from).floor, f2=to.floor==="AUD"?"P0":to.floor; if(f1===f2) return [];
+  const a=F[f1].fac.filter(x=>x.type==="lift").map(x=>x.label), b=F[f2].fac.filter(x=>x.type==="lift").map(x=>x.label);
+  return a.filter(l=>b.includes(l)); }
+function routeLift(){ const opts=liftOptions(); if(S.lift && opts.includes(S.lift)) return S.lift; return autoLift(); }
+function autoLift(){ const to=ROOMS[S.sel]; const fromFloor=doorOf(S.from).floor;
   const ref = to.floor!=="AUD" ? to : null; const l = ref ? nearLift(ref) : nearLift(S.from===ENTRANCE?{floor:"P0",x:170,w:20}:{floor:doorOf(S.from).floor,x:doorOf(S.from).x,w:0}); return l ? l.label : "Elevator A"; }
-function setFrom(name){ S.from=name; S.picking=false; S.floor=doorOf(name).floor; render(); }
+function setFrom(name){ S.from=name; S.lift=null; S.picking=false; S.floor=routeView(); render(); }
 function planRoute(){
   const to=ROOMS[S.sel], a=doorOf(S.from), b=doorOf(S.sel), L=routeLift(), toName=title(S.sel);
   if (S.from===S.sel) return [{floor:to.floor, text:`You're already at ${toName}`}];
@@ -477,20 +496,21 @@ function planRoute(){
     const s=[]; if(a.floor!=="P0") s.push({floor:a.floor, text:`Take ${L} down to Level P0`});
     s.push({floor:"P0", text:`Leave the main building`}, {floor:"AUD", text:`Walk about 500 steps to the Auditorium — seating along the way`}); return s; }
   const near = nearLift(to)?", next to "+nearLift(to).label:"";
+  const arrive = (nearLift(to)&&nearLift(to).label!==L) ? `From ${L}, follow the corridor to ${toName}` : `Follow the corridor to ${toName}${near}`;
   if (a.floor==="AUD"){ const s=[{floor:"AUD", text:`Walk about 500 steps back to the main building (Level P0) — seating along the way`}];
     if (to.floor==="P0") s.push({floor:"P0", text:`Follow the corridor to ${toName}`});
-    else s.push({floor:"P0", text:`Go to ${L} and take it to Level ${to.floor} — no stairs or escalators`},{floor:to.floor, text:`Follow the corridor to ${toName}${near}`});
+    else s.push({floor:"P0", text:`Go to ${L} and take it to Level ${to.floor} — no stairs or escalators`},{floor:to.floor, text:arrive});
     return s; }
   if (isLvl(S.from)){
     if (a.floor===to.floor) return [{floor:a.floor, text:`Find the main corridor — room numbers are on every door`},{floor:a.floor, text:`Follow it to ${toName}${near}`}];
-    return [{floor:a.floor, text:`Go to the nearest elevator`},{floor:a.floor, text:`Take it to Level ${to.floor} — no stairs or escalators`},{floor:to.floor, text:`Follow the corridor to ${toName}${near}`}]; }
+    return [{floor:a.floor, text:S.lift?`Go to ${L}`:`Go to the nearest elevator`},{floor:a.floor, text:`Take it to Level ${to.floor} — no stairs or escalators`},{floor:to.floor, text:arrive}]; }
   if (a.floor===to.floor) return [
     {floor:a.floor, text:S.from===ENTRANCE?`From the main entrance, walk into the corridor`:`Leave ${fromLabel(S.from)} into the corridor`},
     {floor:a.floor, text:`Follow the corridor to ${toName}${nearLift(to)?", next to "+nearLift(to).label:""}`}];
   return [
     {floor:a.floor, text:S.from===ENTRANCE?`From the main entrance, go to ${L} (about 50 steps)`:`Leave ${fromLabel(S.from)} and go to ${L}`},
     {floor:a.floor, text:`Take ${L} to Level ${to.floor} — no stairs or escalators`},
-    {floor:to.floor, text:`Follow the corridor to ${toName}`}];
+    {floor:to.floor, text:arrive}];
 }
 function routeSVG(f){
   const to=ROOMS[S.sel], a=doorOf(S.from), b=doorOf(S.sel), L=routeLift();
@@ -541,9 +561,12 @@ function renderRoute(p){
     p.innerHTML=`${head}
       <div class="ft"><div><span class="dot you"></span><b>${esc(fromLabel(S.from))}</b><span>${esc(lvl(doorOf(S.from).floor))}</span><button id="changeFrom">Change</button></div>
         <div><span class="dot to"></span><b>${esc(title(S.sel))}</b><span>${esc(lvl(to.floor))}</span></div></div>
+      ${(()=>{ const opts=liftOptions(); if(opts.length<2) return ""; const auto=autoLift(), cur=routeLift();
+        return `<div class="sec"><h3>Route options</h3><div class="ropts" role="radiogroup" aria-label="Route options">${[auto,...opts.filter(o=>o!==auto)].map(o=>`<button role="radio" data-lift="${esc(o)}" aria-checked="${o===cur}"><b>Via ${esc(o)}</b><span>${o===auto?`Recommended · closest to ${esc(title(S.sel))}`:`If ${esc(auto)} is busy or out of service`}</span></button>`).join("")}</div></div>`; })()}
       ${fl.length>1?`<div class="sec"><h3>Your trip</h3><div class="tripbox">${overviewSVG(true)}</div></div>`:""}
       <div class="sec"><h3>Step-free route</h3><ol class="steps">${steps.map(s=>`<li><span>${esc(s.text)}${fl.length>1?` <button class="flv" data-showfloor="${s.floor}" aria-pressed="${s.floor===S.floor}">${esc(s.floor==="AUD"?"Aud.":s.floor)}</button>`:""}</span></li>`).join("")}</ol></div>`;
     document.getElementById("changeFrom").onclick=()=>{S.from=null; render();};
+    p.querySelectorAll("[data-lift]").forEach(b=>b.onclick=()=>{S.lift=b.dataset.lift; render();});
     p.querySelectorAll("[data-showfloor]").forEach(b=>b.onclick=()=>{S.floor=b.dataset.showfloor; render();});
   }
   document.getElementById("routeBack").onclick=()=>{S.route=false; S.from=null; S.picking=false; S.floor=to.floor; render();};
@@ -632,8 +655,8 @@ function renderSched(){
     ${S.ssel?`<aside class="preview" aria-label="Location">${pv}</aside>`:""}</div>`;
   screen.querySelectorAll(".card").forEach(b=>b.onclick=()=>{S.ssel = S.ssel===b.dataset.room ? null : b.dataset.room; render();});
   const pc=document.getElementById("pvClose"); if(pc) pc.onclick=()=>{S.ssel=null; render();};
-  const o=document.getElementById("pvOpen"); if(o) o.onclick=()=>openRoom(S.ssel);
-  const rt=document.getElementById("pvRoute"); if(rt) rt.onclick=()=>openRoom(S.ssel,true);
+  const o=document.getElementById("pvOpen"); if(o) o.onclick=()=>openRoom(S.ssel,false,"sched");
+  const rt=document.getElementById("pvRoute"); if(rt) rt.onclick=()=>openRoom(S.ssel,true,"sched");
 }
 
 function renderMap(){
@@ -643,7 +666,7 @@ function renderMap(){
   const layers = Object.entries(FIND).map(([k,v])=>`<button class="lyr" data-find="${k}" aria-pressed="${S.find===k}" title="${esc(v.title)}">${LAYER_ICON[k]}<span>${esc(v.short)}</span></button>`).join("");
   const open = !!(S.sel || S.find || S.route);
   screen.innerHTML = `<div class="mapview${open?" open":""}">
-    <section class="center"><h1>${ALL?"All levels<span>Top to bottom · tap a level to open it</span>":esc(f.label==="Auditorium"?"Auditorium":"Level "+f.label)+"<span>"+esc(f.desc)+"</span>"}</h1>
+    <section class="center">${S.ret?`<button class="retback" id="retBack">← Back to ${S.ret==="sched"?"Program":"results"}</button>`:""}<h1>${ALL?"All levels<span>Top to bottom · tap a level to open it</span>":esc(f.label==="Auditorium"?"Auditorium":"Level "+f.label)+"<span>"+esc(f.desc)+"</span>"}</h1>
       <div class="canvas${S.picking?" picking":""}">${ALL?overviewSVG():planSVG(f, S.sel, S.route)}
         ${!open?`<button class="nextchip" data-open="P1 - Room 129">${ICON.pin}<span><em>Next</em> AI &amp; Timing Matters · P1 · Room 129</span><b aria-hidden="true">→</b></button>`:""}
         <nav class="floorbar" aria-label="Floors">${floors}</nav>
@@ -652,6 +675,8 @@ function renderMap(){
   screen.querySelectorAll("[data-floor]").forEach(b=>{ b.onclick=()=>{ const toLevel=b.classList.contains("slab"); S.floor=b.dataset.floor; if(!S.route && !(toLevel && S.sel && ROOMS[S.sel].floor===S.floor)){S.sel=null;} render(); };
     if (b.classList.contains("slab")) b.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault(); b.onclick();} }); });
   const cp=document.getElementById("cancelPick"); if(cp) cp.onclick=()=>{S.picking=false; S.floor=ROOMS[S.sel].floor; render();};
+  const rbk=document.getElementById("retBack"); if(rbk) rbk.onclick=()=>{ const r=S.ret; S.ret=null; S.route=false; S.from=null; S.sel=null;
+    if(r==="sched"){ S.tab="sched"; } else { S.q=r.slice(2); document.getElementById("q").value=S.q; } render(); };
   screen.querySelectorAll("[data-find]").forEach(b=>b.onclick=()=>setFind(b.dataset.find));
   screen.querySelectorAll(".nextchip").forEach(b=>b.onclick=()=>openRoom(b.dataset.open));
   screen.querySelectorAll(".room").forEach(el=>{ const go=()=>{ if(S.picking){ setFrom(el.dataset.room); return; } S.sel=el.dataset.room; S.find=null; S.route=false; S.from=null; render();};
@@ -696,7 +721,7 @@ function renderPanel(){
       <div class="sec"><h3>Need a break?</h3><button class="rest" id="toQuiet"><span class="ic">${ICON.leaf}</span><span><b>Quiet Room</b><span>Level M2 · by elevator</span></span></button></div>`;
   }
   p.querySelector(".x").onclick=()=>{S.sel=null; S.route=false; S.from=null; render();};
-  const rb=document.getElementById("routeBtn"); if(rb) rb.onclick=()=>{S.route=true; S.from=null; S.picking=false; render();};
+  const rb=document.getElementById("routeBtn"); if(rb) rb.onclick=()=>{S.route=true; S.from=defaultFrom(); S.lift=null; S.floor=routeView(); S.picking=false; render();};
   const tq=document.getElementById("toQuiet"); if(tq) tq.onclick=()=>openRoom("Quiet Room");
 }
 
@@ -726,19 +751,36 @@ function renderList(){
   screen.querySelectorAll("[data-room]").forEach(b=>b.onclick=()=>openRoom(b.dataset.room));
 }
 
+const INTENTS=[
+  {k:"quiet", words:["quiet","calm","rest","break","sensory","relax","silent","tired"], label:"Quiet room", sub:"Show on the map"},
+  {k:"lift", words:["wheelchair","step-free","step free","elevator","lift","accessible","access","ramp","mobility"], label:"Step-free access: elevators", sub:"Every session room is step-free · show elevators"},
+  {k:"wc", words:["restroom","toilet","bathroom","washroom","wc","loo"], label:"Accessible restrooms", sub:"Show on the map"},
+  {k:"seat", words:["seat","sit","bench","seating"], label:"Seating", sub:"Places to sit along the corridors"},
+  {k:"busy", words:["busy","crowd","crowded","loud","noisy","noise"], label:"Busy & loud areas", sub:"Show on the map"},
+  {k:"full", words:["full","fill","small room","popular","capacity","seats","packed"], label:"Sessions that may fill up", sub:"Small rooms at 11:15 — arrive early"}];
+function matchIntents(q){ return INTENTS.filter(it=>it.words.some(w=>q.includes(w)||(q.length>=3&&w.startsWith(q)))); }
 function renderSearch(){
   const q=S.q.toLowerCase(), hits=[];
+  const intents=matchIntents(q);
   Object.values(ROOMS).forEach(r=>{ const t=title(r.name); if(t.toLowerCase().includes(q)||r.name.toLowerCase().includes(q)) hits.push([t, r.name, where(r.name)]); });
   Object.entries(DATA.rooms).forEach(([room,v])=>v.sessions.forEach(([a,b,t])=>{ if(t.toLowerCase().includes(q)&&ROOMS[room]) hits.push([t, room, `${a} · ${ROOMS[room].floor==="AUD"?"Auditorium":ROOMS[room].floor+" · "+title(room)}`]); }));
   FLOORS.forEach(f=>[...new Set(f.fac.map(x=>x.label))].forEach(l=>{ if(l.toLowerCase().includes(q)) hits.push([l, null, f.label==="Auditorium"?"Auditorium":"Level "+f.label]); }));
+  if (intents.some(it=>it.k==="full")) DATA.slot.forEach(([t,room])=>{ const c=capInfo(room); if(c&&c.small) hits.push([t, room, `${c.c} seats · ${ROOMS[room].floor} · ${title(room)}`]); });
   const seen=new Set(), uniq=hits.filter(h=>{const k=h[0]+h[2]; if(seen.has(k)) return false; seen.add(k); return true;}).slice(0,40);
-  screen.innerHTML = `<div class="results"><h1>${uniq.length} result${uniq.length===1?"":"s"} for “${esc(S.q)}”</h1>${uniq.length?`<ul>${uniq.map(([t,room,m])=>`<li>${room?`<button data-room="${esc(room)}">`:"<div>"}<span>${esc(t)}</span><span class="m">${esc(m)}</span>${room?"</button>":"</div>"}</li>`).join("")}</ul>`:`<p class="none">No results. Try “129”, “quiet”, or “AI”.</p>`}</div>`;
-  screen.querySelectorAll("[data-room]").forEach(b=>b.onclick=()=>{ document.getElementById("q").value=""; S.q=""; openRoom(b.dataset.room); });
+  const intentHTML = intents.filter(it=>it.k!=="full").map(it=>`<li><button class="intent" data-intent="${it.k}"><span class="ic">${LAYER_ICON[it.k]}</span><span><b>${esc(it.label)}</b><span>${esc(it.sub)}</span></span><span class="m">Show →</span></button></li>`).join("");
+  const fullHead = intents.some(it=>it.k==="full") ? `<p class="hint">Sessions at 11:15 in rooms with 80 seats or fewer — arrive early.</p>` : "";
+  const total = uniq.length + intents.filter(it=>it.k!=="full").length;
+  screen.innerHTML = `<div class="results"><h1>${total} result${total===1?"":"s"} for “${esc(S.q)}”</h1>
+    ${intentHTML?`<ul class="intents">${intentHTML}</ul>`:""}${fullHead}
+    ${uniq.length?`<ul>${uniq.map(([t,room,m])=>`<li>${room?`<button data-room="${esc(room)}">`:"<div>"}<span>${esc(t)}</span><span class="m">${esc(m)}</span>${room?"</button>":"</div>"}</li>`).join("")}</ul>`:(intentHTML?"":`<p class="none">No results. Try “129”, “quiet”, “wheelchair”, or “full”.</p>`)}</div>`;
+  const clearQ=()=>{ const keep=S.q; document.getElementById("q").value=""; S.q=""; return keep; };
+  screen.querySelectorAll("[data-room]").forEach(b=>b.onclick=()=>{ const k=clearQ(); openRoom(b.dataset.room,false,"q:"+k); });
+  screen.querySelectorAll("[data-intent]").forEach(b=>b.onclick=()=>{ const k=clearQ(); setFind(b.dataset.intent); S.ret="q:"+k; render(); });
 }
 
-function openRoom(name, route=false){ const r=ROOMS[name]; if(!r) return; S.tab="map"; S.view="map"; S.floor=r.floor; S.sel=name; S.route=route; S.from=null; S.picking=false; S.find=null; render(); screen.focus(); }
+function openRoom(name, route=false, ret=null){ const r=ROOMS[name]; if(!r) return; S.ret=ret; S.tab="map"; S.view="map"; S.sel=name; S.route=route; S.lift=null; S.from=route?defaultFrom():null; S.floor=r.floor; if(route) S.floor=routeView(); S.picking=false; S.find=null; render(); screen.focus(); }
 
-document.querySelectorAll(".side [data-tab]").forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab; S.q=""; document.getElementById("q").value=""; S.route=false; render();});
+document.querySelectorAll(".side [data-tab]").forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab; S.ret=null; S.q=""; document.getElementById("q").value=""; S.route=false; render();});
 document.querySelectorAll("#viewseg button").forEach(b=>b.onclick=()=>{S.view=b.dataset.view; render();});
 document.getElementById("q").addEventListener("input",e=>{S.q=e.target.value.trim(); render();});
 render();
